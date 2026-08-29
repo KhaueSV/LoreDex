@@ -7,33 +7,26 @@ use Illuminate\Http\Request;
 
 class WorkController extends Controller
 {
-    // Retorna a lista de todas as obras (GET /api/works)
+    // Função para o GET (listar)
     public function index()
     {
-        return response()->json(Work::withCount('chapters')->latest()->get());
+        // Retorna todas as obras cadastradas, das mais novas para as mais velhas
+        return response()->json(Work::latest()->get());
     }
 
-    // Salva uma nova obra no banco (POST /api/works)
+    // Função para o POST (salvar)
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'type' => 'required|in:novel,manga,webnovel',
-            'author' => 'nullable|string|max:255',
-            'synopsis' => 'nullable|string',
-            'cover_url' => 'nullable|string',
-            'status' => 'required|in:ongoing,completed,dropped',
-        ]);
+        // Criamos uma nova obra no banco de dados
+        $work = new Work();
+        $work->title = $request->title;
+        $work->cover_url = $request->cover_image; // Nome que enviamos do React
+        $work->synopsis = $request->description;  // Nome que enviamos do React
+        $work->type = 'novel'; // Valor padrão
+        $work->status = 'ongoing'; // Valor padrão
+        $work->save();
 
-        $work = Work::create($validated);
-
+        // Retorna a obra criada avisando que deu tudo certo
         return response()->json($work, 201);
-    }
-
-    // Exibe uma obra específica com seus capítulos (GET /api/works/{id})
-    public function show($id)
-    {
-        $work = Work::with('chapters')->findOrFail($id);
-        return response()->json($work);
     }
 }
