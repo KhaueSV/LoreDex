@@ -1,7 +1,9 @@
-    import React, { useEffect, useState } from 'react';
-    import { getWorks, createWork } from '../services/api';
+import React, { useEffect, useState } from 'react';
+import Login from '../pages/Login';
+import { getWorks, createWork, getToken, logout } from '../services/api';
 
-    export default function App() {
+
+function Home() {
         // ---------------- ESTADOS ----------------
         // 1. Banco de Dados Local (Laravel)
         const [myWorks, setMyWorks] = useState([]);
@@ -266,4 +268,20 @@
                 </div>
             </>
         );
-    }
+}
+   export default function App() {
+       const [logged, setLogged] = useState(!!getToken());
+
+       if (!logged) {
+           return <Login onSuccess={() => setLogged(true)} />;
+       }
+
+       return (
+           <>
+               <button onClick={async () => { await logout(); setLogged(false); }}>
+                   Sair
+               </button>
+               <Home />
+           </>
+       );
+   }
