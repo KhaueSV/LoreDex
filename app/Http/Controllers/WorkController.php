@@ -7,26 +7,44 @@ use Illuminate\Http\Request;
 
 class WorkController extends Controller
 {
-    // Função para o GET (listar)
+    // GET: listar
     public function index()
     {
-        // Retorna todas as obras cadastradas, das mais novas para as mais velhas
         return response()->json(Work::latest()->get());
     }
 
-    // Função para o POST (salvar)
+    // POST: salvar
     public function store(Request $request)
     {
-        // Criamos uma nova obra no banco de dados
         $work = new Work();
         $work->title = $request->title;
-        $work->cover_url = $request->cover_image; // Nome que enviamos do React
-        $work->synopsis = $request->description;  // Nome que enviamos do React
-        $work->type = 'novel'; // Valor padrão
-        $work->status = 'ongoing'; // Valor padrão
+        $work->cover_url = $request->cover_image;
+        $work->synopsis = $request->description;
+        $work->type = 'novel';
+        $work->status = 'ongoing';
         $work->save();
 
-        // Retorna a obra criada avisando que deu tudo certo
         return response()->json($work, 201);
+    }
+
+    // PUT: editar
+    public function update(Request $request, $id)
+    {
+        $work = Work::findOrFail($id);
+
+        $work->title = $request->title;
+        $work->cover_url = $request->cover_image;
+        $work->synopsis = $request->description;
+        $work->save();
+
+        return response()->json($work);
+    }
+
+    // DELETE: excluir
+    public function destroy($id)
+    {
+        Work::findOrFail($id)->delete();
+
+        return response()->json(null, 204);
     }
 }

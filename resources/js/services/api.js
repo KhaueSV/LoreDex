@@ -12,9 +12,11 @@ const headers = () => ({
     ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
 });
 
+// ---------------- AUTENTICAÇÃO ----------------
 export const login = async (email, password) => {
     const res = await fetch(`${API_URL}/login`, {
-        method: 'POST', headers: headers(),
+        method: 'POST',
+        headers: headers(),
         body: JSON.stringify({ email, password }),
     });
     const data = await res.json();
@@ -25,7 +27,8 @@ export const login = async (email, password) => {
 
 export const register = async (name, email, password) => {
     const res = await fetch(`${API_URL}/register`, {
-        method: 'POST', headers: headers(),
+        method: 'POST',
+        headers: headers(),
         body: JSON.stringify({ name, email, password }),
     });
     const data = await res.json();
@@ -39,15 +42,42 @@ export const logout = async () => {
     clearToken();
 };
 
+// ---------------- OBRAS ----------------
+// Função para PUXAR os dados (GET)
 export const getWorks = async () => {
-    const res = await fetch(`${API_URL}/works`, { headers: headers() });
-    return res.json();
+    const response = await fetch(`${API_URL}/works`, {
+        method: 'GET',
+        headers: headers(),
+    });
+    return response.json();
 };
 
+// Função para INSERIR novos dados (POST)
 export const createWork = async (workData) => {
-    const res = await fetch(`${API_URL}/works`, {
-        method: 'POST', headers: headers(),
+    const response = await fetch(`${API_URL}/works`, {
+        method: 'POST',
+        headers: headers(),
         body: JSON.stringify(workData),
     });
-    return res.json();
+    return response.json();
+};
+
+// Função para EDITAR uma obra (PUT)
+export const updateWork = async (id, workData) => {
+    const response = await fetch(`${API_URL}/works/${id}`, {
+        method: 'PUT',
+        headers: headers(),
+        body: JSON.stringify(workData),
+    });
+    if (!response.ok) throw new Error('Erro ao atualizar a obra');
+    return response.json();
+};
+
+// Função para EXCLUIR uma obra (DELETE)
+export const deleteWork = async (id) => {
+    const response = await fetch(`${API_URL}/works/${id}`, {
+        method: 'DELETE',
+        headers: headers(),
+    });
+    if (!response.ok) throw new Error('Erro ao excluir a obra');
 };
