@@ -1,19 +1,53 @@
 // resources/js/services/api.js
 
-// URL da sua API do Laravel
-const API_URL = 'http://127.0.0.1:8000/api';
+const API_URL = '/api';
 
-const defaultHeaders = {
+export const getToken = () => localStorage.getItem('token');
+export const setToken = (t) => localStorage.setItem('token', t);
+export const clearToken = () => localStorage.removeItem('token');
+
+const headers = () => ({
     'Content-Type': 'application/json',
-    'Accept': 'application/json'
+    'Accept': 'application/json',
+    ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+});
+
+// ---------------- AUTENTICAÇÃO ----------------
+export const login = async (email, password) => {
+    const res = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Erro ao entrar.');
+    setToken(data.token);
+    return data.user;
 };
 
+export const register = async (name, email, password) => {
+    const res = await fetch(`${API_URL}/register`, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ name, email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Erro ao cadastrar.');
+    setToken(data.token);
+    return data.user;
+};
+
+export const logout = async () => {
+    await fetch(`${API_URL}/logout`, { method: 'POST', headers: headers() });
+    clearToken();
+};
+
+// ---------------- OBRAS ----------------
 // Função para PUXAR os dados (GET)
 export const getWorks = async () => {
     const response = await fetch(`${API_URL}/works`, {
         method: 'GET',
-        headers: defaultHeaders,
-        credentials: 'include'
+        headers: headers(),
     });
     return response.json();
 };
@@ -22,9 +56,8 @@ export const getWorks = async () => {
 export const createWork = async (workData) => {
     const response = await fetch(`${API_URL}/works`, {
         method: 'POST',
-        headers: defaultHeaders,
+        headers: headers(),
         body: JSON.stringify(workData),
-        credentials: 'include'
     });
     return response.json();
 };
@@ -33,9 +66,8 @@ export const createWork = async (workData) => {
 export const updateWork = async (id, workData) => {
     const response = await fetch(`${API_URL}/works/${id}`, {
         method: 'PUT',
-        headers: defaultHeaders,
+        headers: headers(),
         body: JSON.stringify(workData),
-        credentials: 'include'
     });
     if (!response.ok) throw new Error('Erro ao atualizar a obra');
     return response.json();
@@ -45,8 +77,7 @@ export const updateWork = async (id, workData) => {
 export const deleteWork = async (id) => {
     const response = await fetch(`${API_URL}/works/${id}`, {
         method: 'DELETE',
-        headers: defaultHeaders,
-        credentials: 'include'
+        headers: headers(),
     });
     if (!response.ok) throw new Error('Erro ao excluir a obra');
 };

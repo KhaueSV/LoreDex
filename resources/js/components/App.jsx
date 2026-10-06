@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { getWorks, createWork, updateWork, deleteWork } from '../services/api';
+import Login from '../pages/Login';
+import { getWorks, createWork, updateWork, deleteWork, getToken, logout } from '../services/api';
 
 const PLACEHOLDER = 'https://via.placeholder.com/220x320/0f172a/6366f1?text=Sem+Capa';
 
@@ -71,7 +72,7 @@ const CarouselSection = ({ title, icon, works, loading, onEdit, onDelete, onClic
     );
 };
 
-export default function App() {
+function Home() {
     const [allWorks, setAllWorks] = useState([]);
     const [loadingMyWorks, setLoadingMyWorks] = useState(true);
 
@@ -610,6 +611,22 @@ export default function App() {
                     </div>
                 )}
             </div>
+        </>
+    );
+}
+export default function App() {
+    const [logged, setLogged] = useState(!!getToken());
+
+    if (!logged) {
+        return <Login onSuccess={() => setLogged(true)} />;
+    }
+
+    return (
+        <>
+            <button onClick={async () => { await logout(); setLogged(false); }}>
+                Sair
+            </button>
+            <Home />
         </>
     );
 }
