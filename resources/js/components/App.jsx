@@ -616,6 +616,18 @@ function Home() {
 }
 export default function App() {
     const [logged, setLogged] = useState(!!getToken());
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+        } catch (error) {
+            console.error('Erro ao sair:', error);
+        } finally {
+            setLogged(false);
+            setShowLogoutConfirm(false);
+        }
+    };
 
     if (!logged) {
         return <Login onSuccess={() => setLogged(true)} />;
@@ -623,10 +635,131 @@ export default function App() {
 
     return (
         <>
-            <button onClick={async () => { await logout(); setLogged(false); }}>
-                Sair
-            </button>
+            <div
+                style={{
+                    position: 'fixed',
+                    top: '20px',
+                    right: '25px',
+                    zIndex: 500
+                }}
+            >
+                <button
+                    onClick={() => setShowLogoutConfirm(true)}
+                    style={{
+                        background: 'rgba(15, 23, 42, 0.85)',
+                        color: '#cbd5e1',
+                        border: '1px solid #475569',
+                        padding: '10px 18px',
+                        borderRadius: '10px',
+                        fontSize: '14px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        transition: '0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#ef4444';
+                        e.currentTarget.style.borderColor = '#ef4444';
+                        e.currentTarget.style.color = 'white';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(15, 23, 42, 0.85)';
+                        e.currentTarget.style.borderColor = '#475569';
+                        e.currentTarget.style.color = '#cbd5e1';
+                    }}
+                >
+                    Sair
+                </button>
+            </div>
+
             <Home />
+
+            {showLogoutConfirm && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0, 0, 0, 0.75)',
+                        backdropFilter: 'blur(5px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 2000,
+                        padding: '20px'
+                    }}
+                    onClick={() => setShowLogoutConfirm(false)}
+                >
+                    <div
+                        style={{
+                            width: '100%',
+                            maxWidth: '420px',
+                            background: '#1e293b',
+                            border: '1px solid #475569',
+                            borderRadius: '20px',
+                            padding: '30px',
+                            boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2
+                            style={{
+                                margin: '0 0 12px',
+                                color: '#f8fafc',
+                                fontSize: '22px'
+                            }}
+                        >
+                            Sair do LoreDex?
+                        </h2>
+
+                        <p
+                            style={{
+                                margin: '0 0 28px',
+                                color: '#94a3b8',
+                                lineHeight: '1.5'
+                            }}
+                        >
+                            Tem certeza que deseja sair da sua conta?
+                        </p>
+
+                        <div
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                gap: '12px'
+                            }}
+                        >
+                            <button
+                                onClick={() => setShowLogoutConfirm(false)}
+                                style={{
+                                    background: 'transparent',
+                                    color: '#a5b4fc',
+                                    border: '1px solid #6366f1',
+                                    padding: '11px 20px',
+                                    borderRadius: '10px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancelar
+                            </button>
+
+                            <button
+                                onClick={handleLogout}
+                                style={{
+                                    background: '#ef4444',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '11px 20px',
+                                    borderRadius: '10px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Sim, sair
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }
