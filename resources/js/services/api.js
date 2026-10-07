@@ -28,6 +28,7 @@ export const clearSavedEmail = () => {
     localStorage.removeItem('savedEmail');
 };
 
+
 // ---------------- HEADERS ----------------
 
 const headers = () => ({
@@ -63,6 +64,22 @@ export const login = async (email, password) => {
     saveEmail(email);
 
     return data.user;
+};
+
+export const getChapters = async (workId) => {
+    const token = getToken();
+    const response = await fetch(`/api/works/${workId}/chapters`, {
+        headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    
+    if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Erro ao carregar capítulos');
+    }
+    return await response.json();
 };
 
 export const register = async (name, email, password) => {

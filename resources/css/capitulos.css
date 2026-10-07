@@ -1,0 +1,1464 @@
+/* =========================================================
+   BASE
+   ========================================================= */
+
+.chapters-page {
+    width: 100%;
+    max-width: 1050px;
+
+    margin: 0 auto;
+    padding: 20px 22px 50px;
+
+    box-sizing: border-box;
+
+    color: #e5e7eb;
+}
+
+
+/* =========================================================
+   CABEÇALHO
+   ========================================================= */
+
+.chapters-header {
+    display: flex;
+    flex-direction: column;
+
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+
+/* =========================================================
+   VOLTAR
+   ========================================================= */
+
+.chapters-back {
+    display: inline-flex;
+    align-items: center;
+
+    align-self: flex-start;
+
+    padding: 7px 12px;
+
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+
+    color: #9aa7b4;
+
+    background: transparent;
+
+    border: 1px solid #263241;
+    border-radius: 6px;
+
+    cursor: pointer;
+
+    transition: 0.15s ease;
+}
+
+.chapters-back:hover {
+    color: #ffffff;
+
+    border-color: #2E8B57;
+
+    background: rgba(46, 139, 87, 0.08);
+}
+
+
+/* =========================================================
+   OBRA
+   ========================================================= */
+
+.chapters-work {
+    display: flex;
+    align-items: center;
+
+    gap: 18px;
+
+    width: 100%;
+
+    padding: 16px;
+
+    box-sizing: border-box;
+
+    background: #111923;
+
+    border: 1px solid #202c39;
+    border-radius: 9px;
+}
+
+
+.chapters-work img {
+    flex-shrink: 0;
+
+    width: 92px;
+    height: 138px;
+
+    object-fit: cover;
+
+    border-radius: 5px;
+
+    border: 1px solid #2a3745;
+}
+
+
+.chapters-work-info {
+    flex: 1;
+
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 12px;
+}
+
+
+/* =========================================================
+   TÍTULO DA OBRA
+   ========================================================= */
+
+.work-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    gap: 15px;
+}
+
+
+.chapters-label {
+    display: inline-block;
+
+    margin-bottom: 4px;
+
+    padding: 3px 7px;
+
+    font-size: 9px;
+    font-weight: 700;
+
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+
+    color: #72b890;
+
+    background: rgba(46, 139, 87, 0.08);
+
+    border: 1px solid rgba(46, 139, 87, 0.25);
+
+    border-radius: 4px;
+}
+
+
+.chapters-work h1 {
+    margin: 0;
+
+    font-size: clamp(22px, 3vw, 29px);
+
+    font-weight: 700;
+
+    line-height: 1.2;
+
+    color: #f1f5f9;
+}
+
+
+.chapters-work p {
+    margin: 4px 0 0;
+
+    font-size: 12px;
+
+    color: #778594;
+}
+
+
+/* =========================================================
+   NOTA NO CABEÇALHO
+   ========================================================= */
+
+.header-rating {
+    flex-shrink: 0;
+
+    min-width: 58px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    padding: 7px 9px;
+
+    background: #0d151e;
+
+    border: 1px solid #263441;
+    border-radius: 6px;
+}
+
+
+.header-rating strong {
+    font-size: 20px;
+
+    line-height: 1;
+
+    font-weight: 700;
+}
+
+
+.header-rating span {
+    margin-top: 3px;
+
+    font-size: 9px;
+
+    text-transform: uppercase;
+
+    color: #667584;
+}
+
+
+/* =========================================================
+   ESTATÍSTICAS
+   ========================================================= */
+
+.chapters-stats {
+    display: grid;
+
+    grid-template-columns:
+        minmax(120px, 1fr)
+        minmax(120px, 1fr)
+        minmax(170px, 1.4fr);
+
+    gap: 7px;
+}
+
+
+.chapters-stats .stat {
+    min-width: 0;
+
+    padding: 8px 10px;
+
+    background: #0d141d;
+
+    border: 1px solid #202c39;
+
+    border-radius: 6px;
+}
+
+
+.chapters-stats .stat strong {
+    display: block;
+
+    font-size: 16px;
+
+    line-height: 1.2;
+
+    font-weight: 700;
+
+    color: #f1f5f9;
+}
+
+
+.chapters-stats .stat strong small {
+    font-size: 11px;
+
+    font-weight: 500;
+
+    color: #697787;
+}
+
+
+.chapters-stats .stat span {
+    display: block;
+
+    margin-top: 3px;
+
+    font-size: 9px;
+
+    font-weight: 600;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.4px;
+
+    color: #697787;
+}
+
+
+/* =========================================================
+   ESTÁGIOS
+   ========================================================= */
+
+.stage-start {
+    color: #8794a2 !important;
+}
+
+.stage-reading {
+    color: #d8a83e !important;
+}
+
+.stage-advanced {
+    color: #6eb98d !important;
+}
+
+.stage-complete {
+    color: #4caf7d !important;
+}
+
+
+/* =========================================================
+   CONTEÚDO
+   ========================================================= */
+
+.chapters-content {
+    width: 100%;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 14px;
+}
+
+
+/* =========================================================
+   CARDS DASHBOARD
+   ========================================================= */
+
+.dashboard-card {
+    width: 100%;
+
+    padding: 18px;
+
+    box-sizing: border-box;
+
+    background: #111923;
+
+    border: 1px solid #202c39;
+
+    border-radius: 9px;
+}
+
+
+/* =========================================================
+   CABEÇALHO DOS CARDS
+   ========================================================= */
+
+.dashboard-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    gap: 15px;
+
+    margin-bottom: 15px;
+}
+
+
+.card-label {
+    display: block;
+
+    margin-bottom: 4px;
+
+    font-size: 9px;
+
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.7px;
+
+    color: #72b890;
+}
+
+
+.dashboard-card-header h2 {
+    margin: 0;
+
+    font-size: 19px;
+
+    line-height: 1.25;
+
+    color: #f1f5f9;
+}
+
+
+.dashboard-card-header p {
+    margin: 4px 0 0;
+
+    font-size: 12px;
+
+    color: #778594;
+}
+
+
+/* =========================================================
+   PORCENTAGEM
+   ========================================================= */
+
+.progress-percentage {
+    flex-shrink: 0;
+
+    font-size: 24px;
+
+    font-weight: 700;
+
+    line-height: 1;
+
+    color: #72b890;
+}
+
+
+/* =========================================================
+   BARRA DE PROGRESSO
+   ========================================================= */
+
+.reading-progress {
+    width: 100%;
+
+    height: 8px;
+
+    overflow: hidden;
+
+    background: #202b37;
+
+    border-radius: 4px;
+}
+
+
+.reading-progress-bar {
+    height: 100%;
+
+    border-radius: 4px;
+
+    transition:
+        width 0.25s ease,
+        background 0.2s ease;
+}
+
+
+.reading-progress-bar.stage-start {
+    background: #596775;
+}
+
+.reading-progress-bar.stage-reading {
+    background: #b88a2e;
+}
+
+.reading-progress-bar.stage-advanced {
+    background: #2E8B57;
+}
+
+.reading-progress-bar.stage-complete {
+    background: #4caf7d;
+}
+
+
+/* =========================================================
+   RESUMO DO PROGRESSO
+   ========================================================= */
+
+.progress-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 12px;
+
+    margin-top: 8px;
+}
+
+
+.progress-summary > div {
+    display: flex;
+    align-items: baseline;
+
+    gap: 6px;
+}
+
+
+.progress-summary strong {
+    font-size: 13px;
+
+    color: #dce3ea;
+}
+
+
+.progress-summary > div span {
+    font-size: 10px;
+
+    color: #687787;
+}
+
+
+.progress-stage {
+    font-size: 10px;
+
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   CONTROLES
+   ========================================================= */
+
+.progress-controls {
+    display: flex;
+    align-items: flex-end;
+
+    gap: 10px;
+
+    margin-top: 14px;
+}
+
+
+.progress-input-area {
+    flex: 1;
+
+    display: grid;
+
+    grid-template-columns: auto minmax(100px, 180px) auto;
+
+    align-items: center;
+
+    gap: 8px;
+}
+
+
+.progress-input-area label {
+    font-size: 11px;
+
+    font-weight: 600;
+
+    color: #9da9b4;
+}
+
+
+.progress-input-area .form-input {
+    width: 100%;
+}
+
+
+.progress-quick-actions {
+    display: flex;
+
+    gap: 5px;
+}
+
+
+.progress-quick-actions .btn-secondary {
+    min-width: 40px;
+
+    padding: 7px 9px;
+
+    font-family: inherit;
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    color: #8997a6;
+
+    background: transparent;
+
+    border: 1px solid #293643;
+
+    border-radius: 5px;
+
+    cursor: pointer;
+
+    transition: 0.15s ease;
+}
+
+
+.progress-quick-actions .btn-secondary:hover {
+    color: #9acdb0;
+
+    border-color: #2E8B57;
+
+    background: rgba(46, 139, 87, 0.08);
+}
+
+
+/* =========================================================
+   INPUT
+   ========================================================= */
+
+.form-input {
+    width: 100%;
+
+    padding: 9px 11px;
+
+    box-sizing: border-box;
+
+    font-family: inherit;
+
+    font-size: 12px;
+
+    line-height: 1.4;
+
+    color: #dce3e9;
+
+    background: #0d151e;
+
+    border: 1px solid #293643;
+
+    border-radius: 5px;
+
+    outline: none;
+
+    transition: 0.15s ease;
+}
+
+
+.form-input::placeholder {
+    color: #566574;
+}
+
+
+.form-input:focus {
+    border-color: #2E8B57;
+
+    background: #101a23;
+}
+
+
+.progress-input-area input[type="number"]::-webkit-inner-spin-button,
+.progress-input-area input[type="number"]::-webkit-outer-spin-button {
+    opacity: 0.5;
+}
+
+
+/* =========================================================
+   BOTÕES PRINCIPAIS
+   ========================================================= */
+
+.progress-save {
+    flex-shrink: 0;
+
+    min-height: 37px;
+
+    padding: 0 15px;
+
+    white-space: nowrap;
+}
+
+
+.btn-primary {
+    font-family: inherit;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    color: #ffffff;
+
+    background: #2E8B57;
+
+    border: 1px solid #3a9d65;
+
+    border-radius: 5px;
+
+    cursor: pointer;
+
+    transition: 0.15s ease;
+}
+
+
+.btn-primary:hover {
+    background: #267849;
+
+    border-color: #49a875;
+}
+
+
+/* =========================================================
+   AVALIAÇÃO
+   ========================================================= */
+
+.evaluation-card .dashboard-card-header {
+    margin-bottom: 13px;
+}
+
+
+.big-score {
+    flex-shrink: 0;
+
+    min-width: 67px;
+
+    padding: 9px 10px;
+
+    text-align: center;
+
+    font-size: 25px;
+
+    font-weight: 700;
+
+    line-height: 1;
+
+    background: #0d151e;
+
+    border: 1px solid #263441;
+
+    border-radius: 6px;
+}
+
+
+.big-score small {
+    margin-left: 2px;
+
+    font-size: 10px;
+
+    font-weight: 500;
+
+    color: #667584;
+}
+
+
+/* =========================================================
+   NOTAS
+   ========================================================= */
+
+.tier-high {
+    color: #4caf7d !important;
+}
+
+.tier-mid {
+    color: #d8a83e !important;
+}
+
+.tier-low {
+    color: #d86666 !important;
+}
+
+.tier-none {
+    color: #8794a2 !important;
+}
+
+
+/* =========================================================
+   SEÇÕES
+   ========================================================= */
+
+.eval-section {
+    display: flex;
+    flex-direction: column;
+
+    gap: 9px;
+
+    margin-top: 15px;
+}
+
+
+.section-title {
+    font-size: 10px;
+
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.6px;
+
+    color: #7c8997;
+}
+
+
+.section-heading {
+    display: flex;
+    align-items: baseline;
+
+    gap: 8px;
+}
+
+
+.section-heading > span {
+    font-size: 9px;
+
+    color: #596775;
+}
+
+
+/* =========================================================
+   VEREDITOS
+   ========================================================= */
+
+.chips-container {
+    display: grid;
+
+    grid-template-columns: repeat(4, 1fr);
+
+    gap: 6px;
+}
+
+
+.eval-card .chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    gap: 3px;
+
+    min-height: 54px;
+
+    padding: 7px 5px;
+
+    font-family: inherit;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+    color: #9aa7b4;
+
+    background: #17212b;
+
+    border: 1px solid #273542;
+
+    border-radius: 5px;
+
+    cursor: pointer;
+
+    transition: 0.15s ease;
+}
+
+
+.eval-card .chip:hover {
+    color: #dce4eb;
+
+    background: #1c2833;
+
+    border-color: #364655;
+}
+
+
+.eval-card .chip.active {
+    color: #ffffff;
+
+    background: #214f37;
+
+    border-color: #2E8B57;
+}
+
+
+.chip-icon {
+    font-size: 17px;
+
+    line-height: 1;
+}
+
+
+.eval-card .chips-container .chip:nth-child(1).active {
+    background: #572929;
+    border-color: #a84b4b;
+}
+
+
+.eval-card .chips-container .chip:nth-child(2).active {
+    background: #594027;
+    border-color: #b97839;
+}
+
+
+.eval-card .chips-container .chip:nth-child(3).active {
+    background: #214f37;
+    border-color: #2E8B57;
+}
+
+
+.eval-card .chips-container .chip:nth-child(4).active {
+    background: #3c315c;
+    border-color: #7658b5;
+}
+
+
+/* =========================================================
+   DIVISOR
+   ========================================================= */
+
+.eval-divider {
+    width: 100%;
+
+    height: 1px;
+
+    margin: 16px 0 0;
+
+    background: #25313d;
+}
+
+
+/* =========================================================
+   CRITÉRIOS
+   ========================================================= */
+
+.criteria-section {
+    padding: 13px;
+
+    background: #0d151e;
+
+    border: 1px solid #263441;
+
+    border-radius: 6px;
+
+    gap: 12px;
+}
+
+
+.criteria-row {
+    display: flex;
+    align-items: center;
+
+    gap: 11px;
+}
+
+
+.criteria-name {
+    flex: 0 0 115px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 6px;
+
+    font-size: 12px;
+
+    font-weight: 500;
+
+    color: #aab5bf;
+}
+
+
+.criteria-icon {
+    font-size: 14px;
+}
+
+
+.criteria-row input[type="range"] {
+    flex: 1;
+
+    min-width: 0;
+}
+
+
+/* =========================================================
+   SLIDERS
+   ========================================================= */
+
+.eval-card input[type="range"] {
+    width: 100%;
+
+    height: 5px;
+
+    appearance: none;
+    -webkit-appearance: none;
+
+    cursor: pointer;
+
+    background: linear-gradient(
+        to right,
+        #2E8B57 0%,
+        #2E8B57 var(--fill, 0%),
+        #263441 var(--fill, 0%),
+        #263441 100%
+    );
+
+    border-radius: 3px;
+
+    outline: none;
+}
+
+
+.eval-card input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+
+    width: 14px;
+    height: 14px;
+
+    background: #e7ecef;
+
+    border: 2px solid #2E8B57;
+
+    border-radius: 50%;
+}
+
+
+.eval-card input[type="range"]::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+
+    background: #e7ecef;
+
+    border: 2px solid #2E8B57;
+
+    border-radius: 50%;
+}
+
+
+.criteria-score {
+    flex: 0 0 35px;
+
+    padding: 3px 0;
+
+    text-align: center;
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    color: #657482;
+
+    background: #151f29;
+
+    border-radius: 4px;
+}
+
+
+.criteria-score.filled {
+    color: #7fc69d;
+
+    background: rgba(46, 139, 87, 0.12);
+}
+
+
+/* =========================================================
+   NOTA GERAL
+   ========================================================= */
+
+.main-score {
+    margin-top: 14px;
+
+    padding: 13px;
+
+    background: #0d151e;
+
+    border: 1px solid #263441;
+
+    border-radius: 6px;
+}
+
+
+.main-score-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 9px;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+    color: #cdd5dd;
+}
+
+
+.score-display {
+    min-width: 42px;
+
+    padding: 4px 7px;
+
+    text-align: center;
+
+    font-size: 17px;
+
+    border-radius: 4px;
+
+    background: #253341;
+}
+
+
+.score-progress {
+    width: 100%;
+
+    height: 6px;
+
+    overflow: hidden;
+
+    background: #263441;
+
+    border-radius: 3px;
+}
+
+
+.score-progress-fill {
+    height: 100%;
+
+    background: #2E8B57;
+
+    border-radius: 3px;
+}
+
+
+.score-progress-fill.tier-low {
+    background: #9b3e3e;
+}
+
+
+.score-progress-fill.tier-mid {
+    background: #9a741e;
+}
+
+
+.score-progress-fill.tier-high {
+    background: #277448;
+}
+
+
+.score-progress-fill.tier-none {
+    background: #596775;
+}
+
+
+.score-scale {
+    display: flex;
+    justify-content: space-between;
+
+    margin-top: 4px;
+
+    padding: 0 1px;
+
+    font-size: 9px;
+
+    color: #596775;
+}
+
+
+/* =========================================================
+   COMENTÁRIO
+   ========================================================= */
+
+.comment-section {
+    margin-top: 14px;
+}
+
+
+.eval-card textarea.form-input {
+    min-height: 80px;
+
+    resize: vertical;
+}
+
+
+/* =========================================================
+   SALVAR AVALIAÇÃO
+   ========================================================= */
+
+.btn-save-eval {
+    width: 100%;
+
+    margin-top: 15px;
+
+    padding: 10px 12px;
+}
+
+
+.btn-save-eval:active {
+    background: #216b41;
+}
+
+
+/* =========================================================
+   MENSAGEM
+   ========================================================= */
+
+.save-message {
+    position: fixed;
+
+    right: 20px;
+    bottom: 20px;
+
+    z-index: 1100;
+
+    padding: 9px 14px;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+    color: #b9e2c8;
+
+    background: #17251d;
+
+    border: 1px solid #2E8B57;
+
+    border-radius: 6px;
+
+    box-shadow:
+        0 8px 25px rgba(0, 0, 0, 0.35);
+
+    animation: save-message-in 0.2s ease;
+}
+
+
+@keyframes save-message-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 760px) {
+
+    .chapters-page {
+        padding: 18px 16px 45px;
+    }
+
+
+    .chapters-work {
+        align-items: flex-start;
+    }
+
+
+    .progress-controls {
+        flex-direction: column;
+
+        align-items: stretch;
+    }
+
+
+    .progress-input-area {
+        grid-template-columns:
+            auto minmax(100px, 1fr)
+            auto;
+    }
+
+
+    .progress-save {
+        width: 100%;
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 560px) {
+
+    .chapters-page {
+        padding: 15px 11px 40px;
+    }
+
+
+    .chapters-work {
+        gap: 13px;
+
+        padding: 13px;
+    }
+
+
+    .chapters-work img {
+        width: 75px;
+        height: 113px;
+    }
+
+
+    .chapters-work-info {
+        gap: 9px;
+    }
+
+
+    .chapters-work h1 {
+        font-size: 21px;
+    }
+
+
+    .chapters-work p {
+        font-size: 11px;
+    }
+
+
+    .header-rating {
+        min-width: 50px;
+
+        padding: 6px 7px;
+    }
+
+
+    .header-rating strong {
+        font-size: 17px;
+    }
+
+
+    .chapters-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+
+    .chapters-stats .stat:last-child {
+        grid-column: span 2;
+    }
+
+
+    .dashboard-card {
+        padding: 14px;
+    }
+
+
+    .dashboard-card-header h2 {
+        font-size: 17px;
+    }
+
+
+    .progress-percentage {
+        font-size: 21px;
+    }
+
+
+    .progress-summary {
+        align-items: flex-start;
+
+        flex-direction: column;
+
+        gap: 3px;
+    }
+
+
+    .progress-input-area {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+
+        gap: 6px;
+    }
+
+
+    .progress-quick-actions {
+        width: 100%;
+    }
+
+
+    .progress-quick-actions .btn-secondary {
+        flex: 1;
+    }
+
+
+    .big-score {
+        min-width: 58px;
+
+        padding: 8px;
+
+        font-size: 21px;
+    }
+
+
+    .chips-container {
+        gap: 5px;
+    }
+
+
+    .eval-card .chip {
+        min-height: 50px;
+
+        padding: 6px 3px;
+
+        font-size: 11px;
+    }
+
+
+    .chip-icon {
+        font-size: 16px;
+    }
+
+
+    .criteria-section {
+        padding: 11px;
+    }
+
+
+    .criteria-row {
+        gap: 7px;
+    }
+
+
+    .criteria-name {
+        flex-basis: 90px;
+
+        font-size: 11px;
+    }
+
+
+    .criteria-icon {
+        display: none;
+    }
+
+
+    .criteria-score {
+        flex-basis: 32px;
+
+        font-size: 10px;
+    }
+
+
+    .save-message {
+        right: 10px;
+        bottom: 10px;
+        left: 10px;
+
+        text-align: center;
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE PEQUENO
+   ========================================================= */
+
+@media (max-width: 380px) {
+
+    .chapters-work {
+        flex-direction: column;
+    }
+
+
+    .chapters-work img {
+        width: 85px;
+        height: 128px;
+    }
+
+
+    .work-heading {
+        width: 100%;
+    }
+
+
+    .header-rating {
+        position: absolute;
+        right: 25px;
+    }
+
+
+    .chapters-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+
+    .chapters-stats .stat:last-child {
+        grid-column: span 2;
+    }
+
+
+    .dashboard-card {
+        padding: 12px;
+    }
+
+
+    .chips-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+
+    .criteria-name {
+        flex-basis: 78px;
+    }
+
+}
