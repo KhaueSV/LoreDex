@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import Login from '../pages/Login';
+import AdminPanel from '../pages/AdminPanel';
 import '../../css/home.css';
-import { getWorks, createWork, updateWork, deleteWork, getToken, logout } from '../services/api';
+import { getWorks, createWork, updateWork, deleteWork, getToken, logout, getMe } from '../services/api';
 import TelaCapitulos from '../pages/TelaCapitulos';
+import UserMenu from './UserMenu';
+
 const PLACEHOLDER = 'https://via.placeholder.com/220x320/0f172a/6366f1?text=Sem+Capa';
 
 // ---------------- ÍCONES ----------------
@@ -73,7 +76,7 @@ const CarouselSection = ({ title, icon, works, loading, onEdit, onDelete, onClic
     );
 };
 
-function Home() {
+function Home({ isAdmin }) {
     const [allWorks, setAllWorks] = useState([]);
     const [loadingMyWorks, setLoadingMyWorks] = useState(true);
 
@@ -536,8 +539,11 @@ function Home() {
         </>
     );
 }
+
 export default function App() {
     const [logged, setLogged] = useState(!!getToken());
+    const [user, setUser] = useState(null);
+    const [view, setView] = useState('home');
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     const handleLogout = async () => {
@@ -548,25 +554,35 @@ export default function App() {
         } finally {
             setLogged(false);
             setShowLogoutConfirm(false);
+            setView('home');
         }
     };
 
-    if (!logged) {
-        return <Login onSuccess={() => setLogged(true)} />;
-    }
+    useEffect(() => {
+        if (logged) {
+            getMe().then(setUser).catch(async () => { await logout(); setLogged(false); });
+        } else {
+            setUser(null);
+        }
+    }, [logged]);
+
+    if (!logged) return <Login onSuccess={() => setLogged(true)} />;
+
+    const isAdmin = user?.role === 'admin';
 
     return (
         <>
-            <div className="logout-container">
-                <button
-                    className="logout-button"
-                    onClick={() => setShowLogoutConfirm(true)}
-                >
-                    Sair
-                </button>
-            </div>
+            <UserMenu
+                user={user}
+                isAdmin={isAdmin}
+                view={view}
+                onToggleAdmin={() => setView(view === 'admin' ? 'home' : 'admin')}
+                onLogout={() => setShowLogoutConfirm(true)}
+            />
 
-            <Home />
+            {view === 'admin' && isAdmin
+                ? <AdminPanel currentUserId={user.id} />
+                : <Home isAdmin={isAdmin} />}
 
             {showLogoutConfirm && (
                 <div
