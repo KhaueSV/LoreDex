@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import Login from '../pages/Login';
-import { getWorks, createWork, updateWork, deleteWork, getToken, logout } from '../services/api';
+import AdminPanel from '../pages/AdminPanel';
+import { getWorks, createWork, updateWork, deleteWork, getToken, logout, getMe } from '../services/api';
+import UserMenu from './UserMenu';
 
 const PLACEHOLDER = 'https://via.placeholder.com/220x320/0f172a/6366f1?text=Sem+Capa';
 
@@ -72,7 +74,7 @@ const CarouselSection = ({ title, icon, works, loading, onEdit, onDelete, onClic
     );
 };
 
-function Home() {
+function Home({ isAdmin }) {
     const [allWorks, setAllWorks] = useState([]);
     const [loadingMyWorks, setLoadingMyWorks] = useState(true);
 
@@ -614,19 +616,37 @@ function Home() {
         </>
     );
 }
+
 export default function App() {
     const [logged, setLogged] = useState(!!getToken());
+    const [user, setUser] = useState(null);
+    const [view, setView] = useState('home');
 
-    if (!logged) {
-        return <Login onSuccess={() => setLogged(true)} />;
-    }
+    useEffect(() => {
+        if (logged) {
+            getMe().then(setUser).catch(async () => { await logout(); setLogged(false); });
+        } else {
+            setUser(null);
+        }
+    }, [logged]);
+
+    if (!logged) return <Login onSuccess={() => setLogged(true)} />;
+
+    const isAdmin = user?.role === 'admin';
 
     return (
         <>
-            <button onClick={async () => { await logout(); setLogged(false); }}>
-                Sair
-            </button>
-            <Home />
+            <UserMenu
+                user={user}
+                isAdmin={isAdmin}
+                view={view}
+                onToggleAdmin={() => setView(view === 'admin' ? 'home' : 'admin')}
+                onLogout={async () => { await logout(); setLogged(false); setView('home'); }}
+            />
+
+            {view === 'admin' && isAdmin
+                ? <AdminPanel currentUserId={user.id} />
+                : <Home isAdmin={isAdmin} />}
         </>
     );
 }

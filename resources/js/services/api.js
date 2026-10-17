@@ -81,3 +81,32 @@ export const deleteWork = async (id) => {
     });
     if (!response.ok) throw new Error('Erro ao excluir a obra');
 };
+
+export const getMe = async () => {
+    const res = await fetch(`${API_URL}/me`, { headers: headers() });
+    if (!res.ok) throw new Error('Não autenticado');
+    return res.json();
+};
+
+export const getAdminStats = async () => {
+    const res = await fetch(`${API_URL}/admin/stats`, { headers: headers() });
+    if (!res.ok) throw new Error('Erro ao carregar estatísticas');
+    return res.json();
+};
+
+export const getAdminUsers = async () => {
+    const res = await fetch(`${API_URL}/admin/users`, { headers: headers() });
+    if (!res.ok) throw new Error('Erro ao carregar usuários');
+    return res.json();
+};
+
+export const setUserRole = async (id, role) => {
+    const res = await fetch(`${API_URL}/admin/users/${id}/role`, {
+        method: 'PATCH',
+        headers: headers(),
+        body: JSON.stringify({ role }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Erro ao alterar papel');
+    return data;
+};
