@@ -1,6 +1,19 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import Login from '../pages/Login';
-import { getWorks, createWork, updateWork, deleteWork, getToken, logout } from '../services/api';
+import {
+    getWorks,
+    createWork,
+    updateWork,
+    deleteWork,
+    getCollections,
+    createCollection,
+    updateCollection,
+    deleteCollection,
+    addWorkToCollection,
+    removeWorkFromCollection,
+    getToken,
+    logout,
+} from '../services/api';
 
 const PLACEHOLDER = 'https://via.placeholder.com/220x320/0f172a/6366f1?text=Sem+Capa';
 
@@ -614,9 +627,906 @@ function Home() {
         </>
     );
 }
+
+function Collections() {
+    const [collections, setCollections] = useState([]);
+    const [works, setWorks] = useState([]);
+    const [activeCollectionId, setActiveCollectionId] = useState(null);
+    const [workIdToAdd, setWorkIdToAdd] = useState('');
+    const [workSearch, setWorkSearch] = useState('');
+    const [collectionTags, setCollectionTags] = useState('');
+    const [openCollectionMenuId, setOpenCollectionMenuId] = useState(null);
+    const [collectionToDelete, setCollectionToDelete] = useState(null);
+    const [addMode, setAddMode] = useState('library');
+    const [aniListQuery, setAniListQuery] = useState('');
+    const [aniListResults, setAniListResults] = useState([]);
+    const [aniListSearched, setAniListSearched] = useState(false);
+    const [searchingAniList, setSearchingAniList] = useState(false);
+    const [manualWork, setManualWork] = useState({
+        title: '',
+        cover_image: '',
+        description: '',
+        type: 'novel',
+    });
+    const [collectionName, setCollectionName] = useState('');
+    const [collectionDescription, setCollectionDescription] = useState('');
+    const [collectionSearch, setCollectionSearch] = useState('');
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadCollections = async () => {
+            try {
+                const [savedCollections, savedWorks] = await Promise.all([
+                    getCollections(),
+                    getWorks(),
+                ]);
+
+                if (isMounted) {
+                    setCollections(savedCollections);
+                    setWorks(savedWorks);
+                }
+            } catch (loadError) {
+                if (isMounted) {
+                    setError(loadError.message || 'Não foi possível carregar suas coleções.');
+                }
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        };
+
+        loadCollections();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    const activeCollection = collections.find((collection) => collection.id === activeCollectionId);
+    const filteredCollections = collections.filter((collection) => {
+        const search = collectionSearch.trim().toLocaleLowerCase();
+        return !search
+            || collection.name.toLocaleLowerCase().includes(search)
+            || (collection.description || '').toLocaleLowerCase().includes(search)
+            || (collection.tags || []).some((tag) => tag.toLocaleLowerCase().includes(search));
+    });
+    const orderedCollections = [...filteredCollections].sort(
+        (first, second) => Number(second.is_pinned) - Number(first.is_pinned),
+    );
+    const filteredCollectionWorks = (activeCollection?.works || []).filter((work) => {
+        const search = workSearch.trim().toLocaleLowerCase();
+        return !search
+            || (work.title || '').toLocaleLowerCase().includes(search)
+            || (work.synopsis || '').toLocaleLowerCase().includes(search);
+    });
+    const availableWorks = works.filter(
+        (work) => !activeCollection?.works.some((collectionWork) => collectionWork.id === work.id),
+    );
+
+    const handleCreateCollection = async (event) => {
+        event.preventDefault();
+        setSaving(true);
+        setError('');
+
+        try {
+            const collection = await createCollection({
+                name: collectionName.trim(),
+                description: collectionDescription.trim() || null,
+            });
+
+            setCollections((current) => [collection, ...current]);
+            setCollectionName('');
+            setCollectionDescription('');
+            setShowCreateForm(false);
+        } catch (createError) {
+            setError(createError.message || 'Não foi possível criar a coleção.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleTogglePinned = async (collection) => {
+        setSaving(true);
+        setError('');
+
+        try {
+            const updatedCollection = await updateCollection(collection.id, {
+                is_pinned: !collection.is_pinned,
+            });
+            setCollections((current) => current.map(
+                (item) => item.id === updatedCollection.id ? updatedCollection : item,
+            ));
+            setOpenCollectionMenuId(null);
+        } catch (updateError) {
+            setError(updateError.message || 'Não foi possível atualizar os favoritos.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDeleteCollection = async () => {
+        if (!collectionToDelete) return;
+
+        setSaving(true);
+        setError('');
+
+        try {
+            await deleteCollection(collectionToDelete.id);
+            setCollections((current) => current.filter((item) => item.id !== collectionToDelete.id));
+            setOpenCollectionMenuId(null);
+            setCollectionToDelete(null);
+        } catch (deleteError) {
+            setError(deleteError.message || 'Não foi possível excluir a coleção.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleSaveTags = async (event) => {
+        event.preventDefault();
+        if (!activeCollection) return;
+
+        setSaving(true);
+        setError('');
+
+        try {
+            const tags = [...new Set(collectionTags.split(',').map((tag) => tag.trim()).filter(Boolean))];
+            const updatedCollection = await updateCollection(activeCollection.id, { tags });
+            setCollections((current) => current.map(
+                (item) => item.id === updatedCollection.id ? updatedCollection : item,
+            ));
+            setCollectionTags((updatedCollection.tags || []).join(', '));
+        } catch (updateError) {
+            setError(updateError.message || 'Não foi possível salvar as etiquetas.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleExportCollection = () => {
+        if (!activeCollection) return;
+
+        const escapeCsv = (value) => {
+            const cell = String(value ?? '');
+            const safeCell = /^[\t\r=+\-@]/.test(cell) ? `'${cell}` : cell;
+            return `"${safeCell.replace(/"/g, '""')}"`;
+        };
+        const rows = [
+            ['Título', 'Formato', 'Status', 'Sinopse', 'URL da capa'],
+            ...activeCollection.works.map((work) => [
+                work.title,
+                work.type,
+                work.status,
+                work.synopsis,
+                work.cover_url,
+            ]),
+        ];
+        const csv = `\uFEFF${rows.map((row) => row.map(escapeCsv).join(',')).join('\r\n')}`;
+        const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        const link = document.createElement('a');
+        const filename = activeCollection.name
+            .trim()
+            .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-')
+            .replace(/\s+/g, '-');
+
+        link.href = url;
+        link.download = `${filename || 'colecao'}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleAddWork = async (event) => {
+        event.preventDefault();
+        if (!activeCollection || !workIdToAdd) return;
+
+        setSaving(true);
+        setError('');
+
+        try {
+            const updatedCollection = await addWorkToCollection(activeCollection.id, workIdToAdd);
+            setCollections((current) => current.map(
+                (collection) => collection.id === updatedCollection.id ? updatedCollection : collection,
+            ));
+            setWorkIdToAdd('');
+        } catch (addError) {
+            setError(addError.message || 'Não foi possível adicionar a obra.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleSearchAniList = async (event) => {
+        event.preventDefault();
+        if (!aniListQuery.trim()) return;
+
+        setSearchingAniList(true);
+        setError('');
+
+        const query = `
+            query ($search: String) {
+                Page(page: 1, perPage: 8) {
+                    media(search: $search, type: MANGA, isAdult: false, genre_not_in: ["Hentai", "Ecchi"]) {
+                        id
+                        title { romaji english }
+                        coverImage { extraLarge large }
+                        description(asHtml: false)
+                        format
+                        status
+                    }
+                }
+            }
+        `;
+
+        try {
+            const response = await fetch('https://graphql.anilist.co', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({ query, variables: { search: aniListQuery.trim() } }),
+            });
+            const result = await response.json();
+
+            if (!response.ok || result.errors?.length) {
+                throw new Error(result.errors?.[0]?.message || 'Não foi possível pesquisar no AniList.');
+            }
+
+            setAniListResults(result.data?.Page?.media || []);
+            setAniListSearched(true);
+        } catch (searchError) {
+            setError(searchError.message || 'Não foi possível pesquisar no AniList.');
+        } finally {
+            setSearchingAniList(false);
+        }
+    };
+
+    const handleCreateAndAddWork = async (workData) => {
+        if (!activeCollection) return;
+
+        setSaving(true);
+        setError('');
+
+        try {
+            const createdWork = await createWork(workData);
+            setWorks((current) => [createdWork, ...current.filter((work) => work.id !== createdWork.id)]);
+
+            try {
+                const updatedCollection = await addWorkToCollection(activeCollection.id, createdWork.id);
+                setCollections((current) => current.map(
+                    (collection) => collection.id === updatedCollection.id ? updatedCollection : collection,
+                ));
+                setAniListResults((current) => current.filter((novel) => novel.id !== workData.anilist_id));
+                setManualWork({ title: '', cover_image: '', description: '', type: 'novel' });
+            } catch (addError) {
+                setError(`${addError.message || 'A obra foi salva, mas não foi adicionada à coleção.'} A obra foi salva na biblioteca; tente adicioná-la pelo campo "Minha biblioteca".`);
+            }
+        } catch (createError) {
+            setError(createError.message || 'Não foi possível salvar a obra.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleAddAniListWork = (novel) => {
+        handleCreateAndAddWork({
+            title: novel.title.romaji || novel.title.english || 'Obra sem título',
+            cover_image: novel.coverImage.extraLarge || novel.coverImage.large || '',
+            description: novel.description ? novel.description.replace(/<[^>]+>/g, '') : '',
+            type: novel.format || 'novel',
+            status: novel.status || 'ongoing',
+        });
+    };
+
+    const handleCreateManualWork = (event) => {
+        event.preventDefault();
+        handleCreateAndAddWork(manualWork);
+    };
+
+    const handleRemoveWork = async (workId) => {
+        setSaving(true);
+        setError('');
+
+        try {
+            const updatedCollection = await removeWorkFromCollection(activeCollection.id, workId);
+            setCollections((current) => current.map(
+                (collection) => collection.id === updatedCollection.id ? updatedCollection : collection,
+            ));
+        } catch (removeError) {
+            setError(removeError.message || 'Não foi possível remover a obra da coleção.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 24px', color: '#f8fafc' }}>
+            <style>{`
+                .collection-card:hover { border-color: #818cf8 !important; }
+                .collection-work-row { display: flex; align-items: center; gap: 14px; }
+                @media (max-width: 600px) {
+                    .collection-work-row { align-items: flex-start; }
+                    .collection-work-row button { margin-left: auto; }
+                }
+            `}</style>
+            <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+                <div>
+                    {activeCollection ? (
+                        <>
+                            <h1 style={{ margin: 0, fontSize: '30px' }}>{activeCollection.name}</h1>
+                            {activeCollection.description && (
+                                <p style={{ color: '#cbd5e1', margin: '8px 0 0' }}>{activeCollection.description}</p>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <h1 style={{ margin: 0, fontSize: '30px' }}>Minhas coleções</h1>
+                            <p style={{ color: '#cbd5e1', margin: '8px 0 0' }}>
+                                Crie ou pesquise suas coleções.
+                            </p>
+                        </>
+                    )}
+                </div>
+                {activeCollection ? (
+                    <button className="btn-secondary" type="button" onClick={() => {
+                        setActiveCollectionId(null);
+                        setError('');
+                    }}>
+                        ← Voltar às coleções
+                    </button>
+                ) : (
+                    <button className="btn-primary" type="button" onClick={() => setShowCreateForm(true)}>
+                        + Nova coleção
+                    </button>
+                )}
+            </header>
+
+            {error && (
+                <p role="alert" style={{ color: '#fecaca', background: 'rgba(127, 29, 29, .35)', padding: '12px 16px', borderRadius: '10px', marginTop: '24px' }}>
+                    {error}
+                </p>
+            )}
+
+            {loading ? (
+                <p style={{ color: '#cbd5e1', marginTop: '32px' }}>Carregando coleções...</p>
+            ) : (
+                <>
+                    {!activeCollection && (
+                        <label style={{ display: 'block', marginTop: '28px' }}>
+                            <span style={{ display: 'block', color: '#a5b4fc', fontWeight: 600, marginBottom: '8px' }}>
+                                Buscar coleção
+                            </span>
+                            <input
+                                type="search"
+                                aria-label="Buscar coleções"
+                                className="form-input"
+                                placeholder="Digite o nome ou a descrição da coleção..."
+                                value={collectionSearch}
+                                onChange={(event) => setCollectionSearch(event.target.value)}
+                                style={{ margin: 0 }}
+                            />
+                        </label>
+                    )}
+
+                    {!activeCollection && filteredCollections.length > 0 && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '14px', marginTop: '32px' }}>
+                            {orderedCollections.map((collection) => {
+                                const covers = collection.works
+                                    .filter((work) => work.cover_url)
+                                    .slice(0, 3);
+
+                                return (
+                                    <div
+                                        key={collection.id}
+                                        style={{ position: 'relative' }}
+                                    >
+                                        <button
+                                            className="collection-card"
+                                            type="button"
+                                            onClick={() => {
+                                                setActiveCollectionId(collection.id);
+                                                setWorkIdToAdd('');
+                                                setWorkSearch('');
+                                                setCollectionTags((collection.tags || []).join(', '));
+                                                setAddMode('library');
+                                                setAniListQuery('');
+                                                setAniListResults([]);
+                                                setAniListSearched(false);
+                                                setError('');
+                                            }}
+                                            style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                overflow: 'hidden',
+                                                textAlign: 'left',
+                                                color: '#f8fafc',
+                                                cursor: 'pointer',
+                                                padding: 0,
+                                                borderRadius: '14px',
+                                                border: '1px solid rgba(165, 180, 252, .25)',
+                                                background: 'rgba(30, 41, 59, .7)',
+                                                width: '100%',
+                                            }}
+                                        >
+                                            <div
+                                                aria-hidden="true"
+                                                    style={{
+                                                        position: 'relative',
+                                                        display: 'flex',
+                                                        justifyContent: 'center',
+                                                        alignItems: 'center',
+                                                        overflow: 'hidden',
+                                                        width: '100%',
+                                                        height: '180px',
+                                                        background: '#0f172a',
+                                                    }}
+                                            >
+                                                {covers.length > 0 ? covers.map((work, index) => (
+                                                    <img
+                                                        key={work.id}
+                                                        src={work.cover_url}
+                                                        alt=""
+                                                        loading="lazy"
+                                                        style={{
+                                                            position: 'absolute',
+                                                            left: `${index * 12}%`,
+                                                            zIndex: covers.length - index,
+                                                            width: covers.length === 1 ? '100%' : '76%',
+                                                            height: '100%',
+                                                            objectFit: 'cover',
+                                                            objectPosition: 'center 25%',
+                                                            borderRadius: covers.length === 1 ? 0 : '8px',
+                                                            boxShadow: covers.length === 1 ? 'none' : '0 4px 14px rgba(0, 0, 0, .45)',
+                                                        }}
+                                                    />
+                                                )) : (
+                                                    <img
+                                                        src={PLACEHOLDER}
+                                                        alt=""
+                                                        loading="lazy"
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    />
+                                                )}
+                                            </div>
+                                            <span style={{ display: 'block', padding: '16px 18px 18px' }}>
+                                                <strong style={{ display: 'block', fontSize: '16px' }}>{collection.name}</strong>
+                                                <span style={{ display: 'block', marginTop: '8px', color: '#a5b4fc', fontSize: '13px' }}>
+                                                    {collection.works.length} {collection.works.length === 1 ? 'obra' : 'obras'}
+                                                </span>
+                                                {(collection.tags || []).length > 0 && (
+                                                    <span style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+                                                        {collection.tags.slice(0, 3).map((tag) => (
+                                                            <span key={tag} style={{ color: '#cbd5e1', background: 'rgba(99, 102, 241, .2)', borderRadius: '999px', padding: '3px 8px', fontSize: '11px' }}>
+                                                                {tag}
+                                                            </span>
+                                                        ))}
+                                                    </span>
+                                                )}
+                                            </span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            aria-label={`Mais opções para ${collection.name}`}
+                                            aria-haspopup="menu"
+                                            aria-expanded={openCollectionMenuId === collection.id}
+                                            title="Mais opções"
+                                            onClick={() => setOpenCollectionMenuId(
+                                                openCollectionMenuId === collection.id ? null : collection.id,
+                                            )}
+                                            style={{
+                                                position: 'absolute',
+                                                top: '10px',
+                                                right: '10px',
+                                                zIndex: 2,
+                                                border: '1px solid rgba(255,255,255,.35)',
+                                                borderRadius: '999px',
+                                                padding: '7px 10px',
+                                                color: 'white',
+                                                background: 'rgba(15, 23, 42, .88)',
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            <span aria-hidden="true" style={{ fontSize: '20px', lineHeight: 1 }}>⋮</span>
+                                        </button>
+                                        {openCollectionMenuId === collection.id && (
+                                            <div
+                                                role="menu"
+                                                aria-label={`Opções de ${collection.name}`}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '48px',
+                                                    right: '10px',
+                                                    zIndex: 3,
+                                                    minWidth: '190px',
+                                                    padding: '6px',
+                                                    border: '1px solid #475569',
+                                                    borderRadius: '10px',
+                                                    background: '#1e293b',
+                                                    boxShadow: '0 12px 28px rgba(0, 0, 0, .4)',
+                                                }}
+                                            >
+                                                <button
+                                                    type="button"
+                                                    role="menuitem"
+                                                    disabled={saving}
+                                                    onClick={() => handleTogglePinned(collection)}
+                                                    style={{
+                                                        display: 'block',
+                                                        width: '100%',
+                                                        padding: '10px 12px',
+                                                        textAlign: 'left',
+                                                        color: '#f8fafc',
+                                                        border: 0,
+                                                        borderRadius: '7px',
+                                                        background: 'transparent',
+                                                        cursor: saving ? 'wait' : 'pointer',
+                                                    }}
+                                                >
+                                                    {collection.is_pinned ? '★ Remover dos favoritos' : '☆ Favoritar coleção'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    role="menuitem"
+                                                    onClick={() => {
+                                                        setCollectionToDelete(collection);
+                                                        setOpenCollectionMenuId(null);
+                                                    }}
+                                                    style={{
+                                                        display: 'block',
+                                                        width: '100%',
+                                                        padding: '10px 12px',
+                                                        textAlign: 'left',
+                                                        color: '#fca5a5',
+                                                        border: 0,
+                                                        borderRadius: '7px',
+                                                        background: 'transparent',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    Excluir coleção
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {activeCollection && (
+                        <section style={{ marginTop: '28px', padding: '24px', border: '1px solid rgba(165, 180, 252, .2)', borderRadius: '16px', background: 'rgba(15, 23, 42, .55)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                                <form onSubmit={handleSaveTags} style={{ display: 'flex', alignItems: 'center', flex: '1 1 360px', flexWrap: 'wrap', gap: '10px' }}>
+                                    <label htmlFor="collection-tags" style={{ color: '#a5b4fc', fontWeight: 600 }}>
+                                        Etiquetas
+                                    </label>
+                                    <input
+                                        id="collection-tags"
+                                        type="text"
+                                        maxLength={310}
+                                        className="form-input"
+                                        placeholder="Ex.: Fantasia, Ler depois"
+                                        value={collectionTags}
+                                        onChange={(event) => setCollectionTags(event.target.value)}
+                                        style={{ flex: '1 1 200px', margin: 0 }}
+                                    />
+                                    <button className="btn-secondary" type="submit" disabled={saving} style={{ padding: '9px 14px' }}>
+                                        Salvar etiquetas
+                                    </button>
+                                </form>
+                                <button
+                                    className="btn-secondary"
+                                    type="button"
+                                    onClick={handleExportCollection}
+                                    disabled={activeCollection.works.length === 0}
+                                    style={{ padding: '9px 14px' }}
+                                >
+                                    Exportar CSV
+                                </button>
+                            </div>
+
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '24px' }}>
+                                {[
+                                    ['library', 'Minha biblioteca'],
+                                    ['anilist', 'Buscar no AniList'],
+                                    ['manual', 'Cadastro manual'],
+                                ].map(([mode, label]) => (
+                                    <button
+                                        key={mode}
+                                        className={addMode === mode ? 'btn-primary' : 'btn-secondary'}
+                                        type="button"
+                                        aria-pressed={addMode === mode}
+                                        onClick={() => {
+                                            setAddMode(mode);
+                                            setError('');
+                                        }}
+                                        style={{ padding: '9px 14px' }}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {addMode === 'library' && (
+                                <form onSubmit={handleAddWork} style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '16px' }}>
+                                    <label htmlFor="collection-work" style={{ color: '#a5b4fc', fontWeight: 600 }}>
+                                        Escolha uma obra já salva
+                                    </label>
+                                    <select
+                                        id="collection-work"
+                                        value={workIdToAdd}
+                                        onChange={(event) => setWorkIdToAdd(event.target.value)}
+                                        disabled={availableWorks.length === 0 || saving}
+                                        style={{ flex: '1 1 240px', minWidth: 0, padding: '11px 14px', borderRadius: '10px', border: '1px solid #475569', background: '#0f172a', color: 'white' }}
+                                    >
+                                        <option value="">
+                                            {works.length === 0 ? 'Nenhuma obra salva: busque no AniList ou cadastre uma manualmente' : availableWorks.length === 0 ? 'Todas as obras já estão nesta coleção' : 'Selecione uma obra'}
+                                        </option>
+                                        {availableWorks.map((work) => (
+                                            <option key={work.id} value={work.id}>{work.title}</option>
+                                        ))}
+                                    </select>
+                                    <button className="btn-primary" type="submit" disabled={!workIdToAdd || saving}>
+                                        Adicionar à coleção
+                                    </button>
+                                </form>
+                            )}
+
+                            {addMode === 'anilist' && (
+                                <div style={{ marginTop: '16px' }}>
+                                    <form onSubmit={handleSearchAniList} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                        <input
+                                            aria-label="Pesquisar obras no AniList"
+                                            type="search"
+                                            className="form-input"
+                                            placeholder="Digite o nome de uma obra..."
+                                            value={aniListQuery}
+                                            onChange={(event) => {
+                                                setAniListQuery(event.target.value);
+                                                setAniListResults([]);
+                                                setAniListSearched(false);
+                                            }}
+                                            style={{ flex: '1 1 240px', minWidth: 0, marginBottom: 0 }}
+                                        />
+                                        <button className="btn-primary" type="submit" disabled={!aniListQuery.trim() || searchingAniList || saving}>
+                                            {searchingAniList ? 'Pesquisando...' : 'Pesquisar'}
+                                        </button>
+                                    </form>
+                                    {aniListResults.length > 0 && (
+                                        <ul style={{ listStyle: 'none', padding: 0, margin: '16px 0 0', display: 'grid', gap: '10px' }}>
+                                            {aniListResults.map((novel) => (
+                                                <li key={novel.id} className="collection-work-row" style={{ padding: '12px', borderRadius: '12px', background: 'rgba(30, 41, 59, .75)' }}>
+                                                    <img
+                                                        src={novel.coverImage.extraLarge || novel.coverImage.large || PLACEHOLDER}
+                                                        alt=""
+                                                        style={{ width: '46px', height: '62px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }}
+                                                    />
+                                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                                        <strong style={{ display: 'block', overflowWrap: 'anywhere' }}>{novel.title.romaji || novel.title.english}</strong>
+                                                        <span style={{ color: '#94a3b8', fontSize: '13px' }}>{novel.format || 'Manga'} · AniList</span>
+                                                    </div>
+                                                    <button
+                                                        className="btn-primary"
+                                                        type="button"
+                                                        disabled={saving}
+                                                        onClick={() => handleAddAniListWork(novel)}
+                                                        style={{ padding: '8px 12px', flexShrink: 0 }}
+                                                    >
+                                                        Adicionar
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                    {!searchingAniList && aniListSearched && aniListResults.length === 0 && (
+                                        <p style={{ color: '#94a3b8', marginBottom: 0 }}>Nenhuma obra encontrada. Tente outro título.</p>
+                                    )}
+                                </div>
+                            )}
+
+                            {addMode === 'manual' && (
+                                <form onSubmit={handleCreateManualWork} style={{ marginTop: '16px' }}>
+                                    <label htmlFor="manual-work-title" style={{ color: '#94a3b8' }}>Título</label>
+                                    <input
+                                        id="manual-work-title"
+                                        type="text"
+                                        required
+                                        maxLength={255}
+                                        className="form-input"
+                                        value={manualWork.title}
+                                        onChange={(event) => setManualWork((current) => ({ ...current, title: event.target.value }))}
+                                    />
+                                    <label htmlFor="manual-work-type" style={{ color: '#94a3b8' }}>Formato</label>
+                                    <select
+                                        id="manual-work-type"
+                                        className="form-input"
+                                        value={manualWork.type}
+                                        onChange={(event) => setManualWork((current) => ({ ...current, type: event.target.value }))}
+                                    >
+                                        <option value="novel">Novel</option>
+                                        <option value="manga">Mangá</option>
+                                        <option value="webnovel">Web novel</option>
+                                    </select>
+                                    <label htmlFor="manual-work-cover" style={{ color: '#94a3b8' }}>URL da capa (opcional)</label>
+                                    <input
+                                        id="manual-work-cover"
+                                        type="url"
+                                        maxLength={2048}
+                                        className="form-input"
+                                        placeholder="https://..."
+                                        value={manualWork.cover_image}
+                                        onChange={(event) => setManualWork((current) => ({ ...current, cover_image: event.target.value }))}
+                                    />
+                                    <label htmlFor="manual-work-description" style={{ color: '#94a3b8' }}>Sinopse (opcional)</label>
+                                    <textarea
+                                        id="manual-work-description"
+                                        rows="3"
+                                        className="form-input"
+                                        value={manualWork.description}
+                                        onChange={(event) => setManualWork((current) => ({ ...current, description: event.target.value }))}
+                                    />
+                                    <button className="btn-primary" type="submit" disabled={saving} style={{ width: '100%' }}>
+                                        {saving ? 'Salvando e adicionando...' : 'Salvar obra e adicionar à coleção'}
+                                    </button>
+                                </form>
+                            )}
+
+                            {activeCollection.works.length > 0 && (
+                                <label style={{ display: 'block', marginTop: '24px' }}>
+                                    <span style={{ display: 'block', color: '#a5b4fc', fontWeight: 600, marginBottom: '8px' }}>
+                                        Buscar nesta coleção
+                                    </span>
+                                    <input
+                                        type="search"
+                                        aria-label="Buscar obras nesta coleção"
+                                        className="form-input"
+                                        placeholder="Buscar por título ou sinopse..."
+                                        value={workSearch}
+                                        onChange={(event) => setWorkSearch(event.target.value)}
+                                        style={{ margin: 0 }}
+                                    />
+                                </label>
+                            )}
+
+                            {filteredCollectionWorks.length > 0 ? (
+                                <ul style={{ listStyle: 'none', padding: 0, margin: '24px 0 0', display: 'grid', gap: '10px' }}>
+                                    {filteredCollectionWorks.map((work) => (
+                                        <li key={work.id} className="collection-work-row" style={{ padding: '12px', borderRadius: '12px', background: 'rgba(30, 41, 59, .75)' }}>
+                                            <img
+                                                src={work.cover_url || PLACEHOLDER}
+                                                alt=""
+                                                style={{ width: '46px', height: '62px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }}
+                                            />
+                                            <div style={{ minWidth: 0, flex: 1 }}>
+                                                <strong style={{ display: 'block', overflowWrap: 'anywhere' }}>{work.title}</strong>
+                                                {work.type && <span style={{ color: '#94a3b8', fontSize: '13px' }}>{work.type}</span>}
+                                            </div>
+                                            <button
+                                                className="btn-secondary"
+                                                type="button"
+                                                disabled={saving}
+                                                onClick={() => handleRemoveWork(work.id)}
+                                                style={{ padding: '8px 12px', flexShrink: 0 }}
+                                            >
+                                                Remover
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : activeCollection.works.length === 0 ? (
+                                <p style={{ color: '#94a3b8', margin: '24px 0 0' }}>Esta coleção ainda não tem obras.</p>
+                            ) : (
+                                <p style={{ color: '#94a3b8', margin: '24px 0 0' }}>Nenhuma obra corresponde à busca.</p>
+                            )}
+                        </section>
+                    )}
+
+                    {!activeCollection && filteredCollections.length === 0 && (
+                        <section style={{ marginTop: '24px', padding: '32px', textAlign: 'center', border: '1px dashed rgba(165, 180, 252, 0.4)', borderRadius: '16px', background: 'rgba(15, 23, 42, 0.4)' }}>
+                            <h2 style={{ marginTop: 0 }}>
+                                {collections.length === 0 ? 'Você ainda não criou coleções' : 'Nenhuma coleção encontrada'}
+                            </h2>
+                            <p style={{ color: '#cbd5e1', marginBottom: collections.length === 0 ? '20px' : 0 }}>
+                                {collections.length === 0
+                                    ? 'Crie uma coleção para começar a organizar suas obras.'
+                                    : 'Tente buscar por outro nome ou descrição.'}
+                            </p>
+                            {collections.length === 0 && (
+                                <button className="btn-primary" type="button" onClick={() => setShowCreateForm(true)}>
+                                    Criar primeira coleção
+                                </button>
+                            )}
+                        </section>
+                    )}
+                </>
+            )}
+
+            {showCreateForm && (
+                <div className="modal-bg" onClick={() => setShowCreateForm(false)}>
+                    <div className="modal" role="dialog" aria-modal="true" aria-labelledby="new-collection-title" onClick={(event) => event.stopPropagation()}>
+                        <button className="modal-close" type="button" aria-label="Fechar" onClick={() => setShowCreateForm(false)}>✕</button>
+                        <h2 id="new-collection-title" style={{ marginTop: 0 }}>Nova coleção</h2>
+                        <form onSubmit={handleCreateCollection}>
+                            <label htmlFor="collection-name" style={{ color: '#94a3b8' }}>Nome</label>
+                            <input
+                                id="collection-name"
+                                type="text"
+                                required
+                                maxLength={100}
+                                className="form-input"
+                                value={collectionName}
+                                onChange={(event) => setCollectionName(event.target.value)}
+                                autoFocus
+                            />
+                            <label htmlFor="collection-description" style={{ color: '#94a3b8' }}>Descrição (opcional)</label>
+                            <textarea
+                                id="collection-description"
+                                maxLength={1000}
+                                rows="3"
+                                className="form-input"
+                                value={collectionDescription}
+                                onChange={(event) => setCollectionDescription(event.target.value)}
+                            />
+                            <button className="btn-primary" type="submit" disabled={saving} style={{ width: '100%' }}>
+                                {saving ? 'Criando...' : 'Criar coleção'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {collectionToDelete && (
+                <div className="modal-bg" onClick={() => setCollectionToDelete(null)}>
+                    <div
+                        className="modal"
+                        role="alertdialog"
+                        aria-modal="true"
+                        aria-labelledby="delete-collection-title"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <button
+                            className="modal-close"
+                            type="button"
+                            aria-label="Fechar"
+                            onClick={() => setCollectionToDelete(null)}
+                        >
+                            ✕
+                        </button>
+                        <h2 id="delete-collection-title" style={{ marginTop: 0 }}>Excluir coleção?</h2>
+                        <p style={{ color: '#cbd5e1', lineHeight: 1.5 }}>
+                            A coleção “{collectionToDelete.name}” será excluída. As obras da sua biblioteca não serão apagadas.
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                            <button
+                                className="btn-secondary"
+                                type="button"
+                                disabled={saving}
+                                onClick={() => setCollectionToDelete(null)}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                className="btn-danger"
+                                type="button"
+                                disabled={saving}
+                                onClick={handleDeleteCollection}
+                            >
+                                {saving ? 'Excluindo...' : 'Excluir coleção'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </main>
+    );
+}
 export default function App() {
     const [logged, setLogged] = useState(!!getToken());
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [pagina, setPagina] = useState('inicio');
 
     const handleLogout = async () => {
         try {
@@ -635,6 +1545,18 @@ export default function App() {
 
     return (
         <>
+            <style>{`
+                body { background: radial-gradient(1200px 600px at 20% -10%, #2e2a6b 0%, transparent 60%), linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); background-attachment: fixed; color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; margin: 0; min-height: 100vh; }
+                .btn-primary { background: #6366f1; color: white; padding: 12px 24px; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+                .btn-primary:hover { background: #4f46e5; }
+                .btn-primary:disabled, .btn-secondary:disabled { opacity: .55; cursor: not-allowed; }
+                .btn-secondary { background: transparent; color: #a5b4fc; padding: 12px 24px; border: 1px solid #6366f1; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+                .btn-secondary:hover { background: rgba(99, 102, 241, 0.15); }
+                .form-input { width: 100%; padding: 12px; margin-top: 8px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white; }
+                .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
+                .modal { background: #1e293b; padding: 36px; border-radius: 24px; width: 100%; max-width: 500px; position: relative; border: 1px solid #475569; }
+                .modal-close { position: absolute; top: 18px; right: 18px; background: transparent; color: #94a3b8; border: none; cursor: pointer; font-size: 20px; }
+            `}</style>
             <div
                 style={{
                     position: 'fixed',
@@ -671,7 +1593,43 @@ export default function App() {
                 </button>
             </div>
 
-            <Home />
+            <nav
+                aria-label="Navegação principal"
+                style={{ display: 'flex', gap: '20px', padding: '20px 25px 0' }}
+            >
+                <button
+                    type="button"
+                    onClick={() => setPagina('inicio')}
+                    style={{
+                        padding: '10px 16px',
+                        borderRadius: '10px',
+                        border: '1px solid #6366f2',
+                        background: pagina === 'inicio' ? '#6366f2' : 'transparent',
+                        color: 'white',
+                        cursor: 'pointer',
+                    }}
+                >
+                    Tela inicial
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => setPagina('colecoes')}
+                    style={{
+                        padding: '10px 16px',
+                        borderRadius: '10px',
+                        border: '1px solid #6366f2',
+                        background: pagina === 'colecoes' ? '#6366f2' : 'transparent',
+                        color: 'white',
+                        cursor: 'pointer',
+                    }}
+                >
+                    Minhas coleções
+                </button>
+            </nav>
+
+            {pagina === 'inicio' && <Home />}
+            {pagina === 'colecoes' && <Collections />}
 
             {showLogoutConfirm && (
                 <div

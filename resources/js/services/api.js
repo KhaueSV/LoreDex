@@ -128,11 +128,13 @@ export const createWork = async (workData) => {
         body: JSON.stringify(workData),
     });
 
+    const data = await response.json().catch(() => ({}));
+
     if (!response.ok) {
-        throw new Error('Erro ao adicionar a obra.');
+        throw new Error(data.message || 'Erro ao adicionar a obra.');
     }
 
-    return response.json();
+    return data;
 };
 
 // EDITAR uma obra (PUT)
@@ -160,4 +162,74 @@ export const deleteWork = async (id) => {
     if (!response.ok) {
         throw new Error('Erro ao excluir a obra.');
     }
+};
+
+const collectionResponse = async (response, fallbackMessage) => {
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        throw new Error(data.message || fallbackMessage);
+    }
+
+    return data;
+};
+
+export const getCollections = async () => {
+    const response = await fetch(`${API_URL}/collections`, {
+        method: 'GET',
+        headers: headers(),
+    });
+
+    return collectionResponse(response, 'Erro ao carregar as coleções.');
+};
+
+export const createCollection = async (collectionData) => {
+    const response = await fetch(`${API_URL}/collections`, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify(collectionData),
+    });
+
+    return collectionResponse(response, 'Erro ao criar a coleção.');
+};
+
+export const updateCollection = async (collectionId, collectionData) => {
+    const response = await fetch(`${API_URL}/collections/${collectionId}`, {
+        method: 'PATCH',
+        headers: headers(),
+        body: JSON.stringify(collectionData),
+    });
+
+    return collectionResponse(response, 'Erro ao atualizar a coleção.');
+};
+
+export const deleteCollection = async (collectionId) => {
+    const response = await fetch(`${API_URL}/collections/${collectionId}`, {
+        method: 'DELETE',
+        headers: headers(),
+    });
+
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || 'Erro ao excluir a coleção.');
+    }
+};
+
+export const addWorkToCollection = async (collectionId, workId) => {
+    const response = await fetch(`${API_URL}/collections/${collectionId}/works`, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ work_id: workId }),
+    });
+
+    return collectionResponse(response, 'Erro ao adicionar a obra à coleção.');
+};
+
+export const removeWorkFromCollection = async (collectionId, workId) => {
+    const response = await fetch(`${API_URL}/collections/${collectionId}/works/${workId}`, {
+        method: 'DELETE',
+        headers: headers(),
+    });
+
+    return collectionResponse(response, 'Erro ao remover a obra da coleção.');
 };
