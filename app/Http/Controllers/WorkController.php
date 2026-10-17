@@ -20,6 +20,7 @@ class WorkController extends Controller
         $work->title = $request->title;
         $work->cover_url = $request->cover_image;
         $work->synopsis = $request->description;
+        $work->source_url = $request->source_url;
         $work->type = 'novel';
         $work->status = 'ongoing';
         $work->save();
@@ -35,6 +36,7 @@ class WorkController extends Controller
         $work->title = $request->title;
         $work->cover_url = $request->cover_image;
         $work->synopsis = $request->description;
+        $work->total_chapters = $request->total_chapters ?? 0;
         $work->save();
 
         return response()->json($work);

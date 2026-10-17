@@ -2,85 +2,184 @@
 
 const API_URL = '/api';
 
+// ---------------- TOKEN ----------------
+
 export const getToken = () => localStorage.getItem('token');
-export const setToken = (t) => localStorage.setItem('token', t);
-export const clearToken = () => localStorage.removeItem('token');
+
+export const setToken = (t) => {
+    localStorage.setItem('token', t);
+};
+
+export const clearToken = () => {
+    localStorage.removeItem('token');
+};
+
+// ---------------- E-MAIL ----------------
+
+export const getSavedEmail = () => {
+    return localStorage.getItem('savedEmail') || '';
+};
+
+export const saveEmail = (email) => {
+    localStorage.setItem('savedEmail', email);
+};
+
+export const clearSavedEmail = () => {
+    localStorage.removeItem('savedEmail');
+};
+
+
+// ---------------- HEADERS ----------------
 
 const headers = () => ({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+    ...(getToken()
+        ? { Authorization: `Bearer ${getToken()}` }
+        : {}),
 });
 
 // ---------------- AUTENTICAÇÃO ----------------
+
 export const login = async (email, password) => {
     const res = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: headers(),
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+            email,
+            password,
+        }),
     });
+
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Erro ao entrar.');
+
+    if (!res.ok) {
+        throw new Error(data.message || 'Erro ao entrar.');
+    }
+
+    // Salva o token
     setToken(data.token);
+
+    // Salva somente o e-mail
+    saveEmail(email);
+
     return data.user;
+};
+
+export const getChapters = async (workId) => {
+    const token = getToken();
+    const response = await fetch(`/api/works/${workId}/chapters`, {
+        headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    
+    if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Erro ao carregar capítulos');
+    }
+    return await response.json();
 };
 
 export const register = async (name, email, password) => {
     const res = await fetch(`${API_URL}/register`, {
         method: 'POST',
         headers: headers(),
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({
+            name,
+            email,
+            password,
+        }),
     });
+
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Erro ao cadastrar.');
+
+    if (!res.ok) {
+        throw new Error(data.message || 'Erro ao cadastrar.');
+    }
+
+    // Salva o token
     setToken(data.token);
+
+    // Salva somente o e-mail
+    saveEmail(email);
+
     return data.user;
 };
 
 export const logout = async () => {
-    await fetch(`${API_URL}/logout`, { method: 'POST', headers: headers() });
-    clearToken();
+    try {
+        await fetch(`${API_URL}/logout`, {
+            method: 'POST',
+            headers: headers(),
+        });
+    } finally {
+        // Remove somente o token.
+        // O e-mail continua salvo para facilitar o próximo login.
+        clearToken();
+    }
 };
 
 // ---------------- OBRAS ----------------
-// Função para PUXAR os dados (GET)
+
+// PUXAR os dados (GET)
 export const getWorks = async () => {
     const response = await fetch(`${API_URL}/works`, {
         method: 'GET',
         headers: headers(),
     });
+
+    if (!response.ok) {
+        throw new Error('Erro ao carregar as obras.');
+    }
+
     return response.json();
 };
 
-// Função para INSERIR novos dados (POST)
+// INSERIR novos dados (POST)
 export const createWork = async (workData) => {
     const response = await fetch(`${API_URL}/works`, {
         method: 'POST',
         headers: headers(),
         body: JSON.stringify(workData),
     });
+
+    if (!response.ok) {
+        throw new Error('Erro ao adicionar a obra.');
+    }
+
     return response.json();
 };
 
-// Função para EDITAR uma obra (PUT)
+// EDITAR uma obra (PUT)
 export const updateWork = async (id, workData) => {
     const response = await fetch(`${API_URL}/works/${id}`, {
         method: 'PUT',
         headers: headers(),
         body: JSON.stringify(workData),
     });
-    if (!response.ok) throw new Error('Erro ao atualizar a obra');
+
+    if (!response.ok) {
+        throw new Error('Erro ao atualizar a obra.');
+    }
+
     return response.json();
 };
 
-// Função para EXCLUIR uma obra (DELETE)
+// EXCLUIR uma obra (DELETE)
 export const deleteWork = async (id) => {
     const response = await fetch(`${API_URL}/works/${id}`, {
         method: 'DELETE',
         headers: headers(),
     });
-    if (!response.ok) throw new Error('Erro ao excluir a obra');
+
+    if (!response.ok) {
+        throw new Error('Erro ao excluir a obra.');
+    }
 };
+
+// ---------------- USUÁRIO LOGADO E ADMIN ----------------
 
 export const getMe = async () => {
     const res = await fetch(`${API_URL}/me`, { headers: headers() });

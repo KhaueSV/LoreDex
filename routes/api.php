@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\WorkController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\ChapterController;
 
 // Rotas públicas
 Route::post('/register', [AuthController::class, 'register']);
@@ -16,6 +17,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/works', [WorkController::class, 'index']);
     Route::get('/works/{work}', [WorkController::class, 'show']);
+
+    // Capítulos de uma obra (leitura)
+    Route::get('/works/{work}/chapters', [ChapterController::class, 'index']);
 
     // Só administrador
     Route::middleware('admin')->group(function () {
