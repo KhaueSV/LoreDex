@@ -5,6 +5,7 @@ use App\Http\Controllers\WorkController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ChapterController;
+use App\Http\Controllers\WorkReviewController;
 
 // Rotas públicas
 Route::post('/register', [AuthController::class, 'register']);
@@ -21,9 +22,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Capítulos de uma obra (leitura)
     Route::get('/works/{work}/chapters', [ChapterController::class, 'index']);
 
-    // Rotas de Comentários e Avaliações da Obra
+   // Rotas de Comentários e Avaliações da Obra
     Route::get('/works/{workId}/reviews', [WorkReviewController::class, 'index']);
     Route::post('/works/{workId}/reviews', [WorkReviewController::class, 'store']);
+    Route::put('/works/{workId}/reviews/{reviewId}', [WorkReviewController::class, 'update']);
     Route::delete('/works/{workId}/reviews/{reviewId}', [WorkReviewController::class, 'destroy']);
 
     // Só administrador

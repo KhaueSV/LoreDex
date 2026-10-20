@@ -42,6 +42,36 @@ class WorkReviewController extends Controller
         return response()->json($review, 201);
     }
 
+     // Editar comentário (autor ou administrador)
+    public function update(Request $request, $workId, $reviewId)
+    {
+        $validated = $request->validate([
+            'comment' => 'required|string|max:2000',
+        ]);
+
+        $review = WorkReview::where('work_id', $workId)
+            ->findOrFail($reviewId);
+
+        $user = $request->user();
+
+        if (
+            (int) $review->user_id !== (int) $user->id
+            && $user->role !== 'admin'
+        ) {
+            return response()->json([
+                'message' => 'Sem permissão para editar este comentário.',
+            ], 403);
+        }
+
+        $review->update([
+            'comment' => $validated['comment'],
+        ]);
+
+        $review->load('user:id,name');
+
+        return response()->json($review);
+    }
+
     // 3. Excluir um comentário (Apenas o autor do comentário ou Admin)
     public function destroy(Request $request, $workId, $reviewId)
     {

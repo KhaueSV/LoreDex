@@ -213,6 +213,26 @@ export const createWorkReview = async (workId, payload) => {
     return await response.json();
 };
 
+// Editar comentário
+export const updateWorkReview = async (workId, reviewId, payload) => {
+    const response = await fetch(
+        `${API_URL}/works/${workId}/reviews/${reviewId}`,
+        {
+            method: 'PUT',
+            headers: headers(),
+            body: JSON.stringify(payload),
+        }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || 'Erro ao editar comentário.');
+    }
+
+    return data;
+};
+
 // Deletar comentário
 export const deleteWorkReview = async (workId, reviewId) => {
     const token = getToken();
