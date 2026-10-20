@@ -321,7 +321,6 @@ function Home({ isAdmin }) {
                     <img src="/logo.png" alt="LoreDex" style={{ width: '60px', height: '60px', background: '#f8fafc', borderRadius: '50%', padding: '5px' }} />
                     <div>
                         <h1 style={{ margin: 0, fontSize: '36px' }}>Lore<span style={{ color: '#6366f1' }}>Dex</span></h1>
-                        <p style={{ margin: 0, color: '#94a3b8' }}>Sua biblioteca inteligente.</p>
                     </div>
                 </div>
 

@@ -131,7 +131,9 @@ export const getWorks = async () => {
     });
 
     if (!response.ok) {
-        throw new Error('Erro ao carregar as obras.');
+    const erro = await response.text();
+    console.error('Erro ao carregar obras:', response.status, erro);
+    throw new Error('Erro ao carregar as obras.');
     }
 
     return response.json();
@@ -178,6 +180,53 @@ export const deleteWork = async (id) => {
         throw new Error('Erro ao excluir a obra.');
     }
 };
+
+// Buscar todos os comentários de uma obra
+export const getWorkReviews = async (workId) => {
+    const token = getToken();
+    const response = await fetch(`/api/works/${workId}/reviews`, {
+        headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    if (!response.ok) throw new Error('Erro ao carregar comentários.');
+    return await response.json();
+};
+
+// Publicar comentário / avaliação
+export const createWorkReview = async (workId, payload) => {
+    const token = getToken();
+    const response = await fetch(`/api/works/${workId}/reviews`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload), 
+    });
+    if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Erro ao publicar comentário.');
+    }
+    return await response.json();
+};
+
+// Deletar comentário
+export const deleteWorkReview = async (workId, reviewId) => {
+    const token = getToken();
+    const response = await fetch(`/api/works/${workId}/reviews/${reviewId}`, {
+        method: 'DELETE',
+        headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    if (!response.ok) throw new Error('Erro ao excluir comentário.');
+    return await response.json();
+};
+
 
 // ---------------- USUÁRIO LOGADO E ADMIN ----------------
 

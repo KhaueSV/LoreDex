@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import '../../css/capitulos.css';
+import { getWorkReviews, createWorkReview, deleteWorkReview } from '../services/api';
 
 // Ícones SVG vetoriais nítidos (dispensam pacotes externos)
 const Icons = {
@@ -90,13 +91,24 @@ const Icons = {
             <path d="M19.439 7.85c0-1.57.802-2.54 2.161-2.54 1.36 0 2.4 1.25 2.4 2.54 0 1.3-.96 2.35-2.4 2.35v3.6h-3.6c0-1.44-1.05-2.4-2.35-2.4-1.29 0-2.54 1.04-2.54 2.4 0 1.35.97 2.16 2.54 2.16v3.6H4.2c-1.2 0-2.2-1-2.2-2.2V4.2C2 3 3 2 4.2 2h11.45v3.6c-1.57 0-2.54.81-2.54 2.16 0 1.36 1.25 2.4 2.54 2.4 1.3 0 2.35-.96 2.35-2.4h3.6v.09h-.16z"></path>
         </svg>
     ),
+    MessageSquare: () => (
+        <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+    ),
+    Send: () => (
+        <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+    ),
 };
 
 const VERDICTS = [
-    { key: 'Lixo', label: 'Lixo', icon: Icons.Trash, activeClass: 'active-lixo' },
-    { key: 'Ruim', label: 'Ruim', icon: Icons.ThumbsDown, activeClass: 'active-ruim' },
-    { key: 'Bom', label: 'Bom', icon: Icons.ThumbsUp, activeClass: 'active-bom' },
-    { key: 'Foda', label: 'Foda', icon: Icons.Flame, activeClass: 'active-foda' },
+    { key: 'lixo', label: 'Lixo', icon: Icons.Trash, activeClass: 'active-lixo' },
+    { key: 'ruim', label: 'Ruim', icon: Icons.ThumbsDown, activeClass: 'active-ruim' },
+    { key: 'bom', label: 'Bom', icon: Icons.ThumbsUp, activeClass: 'active-bom' },
+    { key: 'foda', label: 'Foda', icon: Icons.Flame, activeClass: 'active-foda' },
 ];
 
 const CRITERIA = [
@@ -148,16 +160,32 @@ export default function TelaCapitulos({ work, onBack }) {
 
     const [message, setMessage] = useState('');
 
+    // Estados para o Feed de Comentários Gerais
+    const [reviews, setReviews] = useState([]);
+    const [newComment, setNewComment] = useState('');
+    const [loadingReviews, setLoadingReviews] = useState(false);
+
     const progress = totalChapters > 0
         ? Math.min(100, Math.max(0, (chaptersRead / totalChapters) * 100))
         : 0;
+
+    // Buscar comentários do servidor ao abrir a obra
+    useEffect(() => {
+        if (work?.id) {
+            setLoadingReviews(true);
+            getWorkReviews(work.id)
+                .then((data) => setReviews(data))
+                .catch((err) => console.error('Erro ao carregar comentários:', err))
+                .finally(() => setLoadingReviews(false));
+        }
+    }, [work?.id]);
 
     // Auto-salva o progresso sempre que muda
     useEffect(() => {
         localStorage.setItem(progressKey, String(chaptersRead));
     }, [chaptersRead, progressKey]);
 
-    // Recalcula média dos critérios (com correção quando zera tudo)
+    // Recalcula média dos critérios
     useEffect(() => {
         const notas = [
             evaluation.arte,
@@ -225,6 +253,45 @@ export default function TelaCapitulos({ work, onBack }) {
         localStorage.setItem(evaluationKey, JSON.stringify(evaluation));
         localStorage.setItem(progressKey, String(chaptersRead));
         showToast('Avaliação e progresso salvos com sucesso!');
+    };
+
+    // Função para publicar um comentário geral no feed
+    const handlePostComment = async (e) => {
+        e.preventDefault();
+        if (!newComment.trim()) return;
+
+        try {
+            const created = await createWorkReview(work.id, {
+                comment: newComment,
+                verdict: evaluation.indicador || null,
+                score: evaluation.nota_geral > 0 ? evaluation.nota_geral : null,
+                criteria: {
+                    arte: evaluation.arte,
+                    personagem: evaluation.personagem,
+                    traducao: evaluation.traducao,
+                    historia: evaluation.historia,
+                    enredo: evaluation.enredo,
+                }
+            });
+
+            setReviews([created, ...reviews]);
+            setNewComment('');
+            showToast('Comentário publicado com sucesso!');
+        } catch (error) {
+            alert(error.message || 'Erro ao publicar comentário.');
+        }
+    };
+
+    // Função para excluir um comentário
+    const handleDeleteComment = async (reviewId) => {
+        if (!window.confirm('Deseja realmente excluir este comentário?')) return;
+        try {
+            await deleteWorkReview(work.id, reviewId);
+            setReviews(reviews.filter((r) => r.id !== reviewId));
+            showToast('Comentário removido.');
+        } catch (error) {
+            alert('Erro ao excluir comentário.');
+        }
     };
 
     const remainingChapters = totalChapters > chaptersRead ? totalChapters - chaptersRead : 0;
@@ -412,7 +479,6 @@ export default function TelaCapitulos({ work, onBack }) {
                     </div>
 
                     {/* VEREDITOS */}
-                    
                     <div className="verdict-grid">
                         {VERDICTS.map(({ key, label, icon: IconComponent, activeClass }) => {
                             const isActive = evaluation.indicador === key;
@@ -472,7 +538,7 @@ export default function TelaCapitulos({ work, onBack }) {
 
                     {/* COMENTÁRIO */}
                     <div className="section-subheading" style={{ marginTop: '22px' }}>
-                        <span className="section-label">Anotações & Comentário</span>
+                        <span className="section-label">Anotações & Comentário pessoal</span>
                     </div>
 
                     <textarea
@@ -489,6 +555,92 @@ export default function TelaCapitulos({ work, onBack }) {
                             <span>Salvar Avaliação Completa</span>
                         </button>
                     </div>
+                </section>
+
+                {/* NOVO CARD: FEED DE COMENTÁRIOS GERAIS DA COMUNIDADE */}
+                <section className="content-card">
+                    <div className="card-header-row">
+                        <div className="card-title-group">
+                            <div className="card-icon-pill">
+                                <Icons.MessageSquare />
+                            </div>
+                            <div>
+                                <h2>Comentários Gerais da Comunidade</h2>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* FORMULÁRIO DE NOVO COMENTÁRIO */}
+                    <form onSubmit={handlePostComment} style={{ marginBottom: '24px' }}>
+                        <textarea
+                            className="comment-input"
+                            placeholder="Escreva um comentário público sobre esta obra..."
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            rows="3"
+                        />
+                        <div className="eval-footer-row" style={{ marginTop: '10px' }}>
+                            <button type="submit" className="btn-primary-action">
+                                <Icons.Send />
+                                <span>Publicar Comentário</span>
+                            </button>
+                        </div>
+                    </form>
+
+                    {/* LISTAGEM DOS COMENTÁRIOS */}
+                    {loadingReviews ? (
+                        <p style={{ color: 'var(--ld-text-muted)', textAlign: 'center', padding: '20px 0' }}>Carregando comentários...</p>
+                    ) : reviews.length === 0 ? (
+                        <p style={{ color: 'var(--ld-text-muted)', textAlign: 'center', padding: '20px 0' }}>Nenhum comentário publicado ainda. Seja o primeiro!</p>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            {reviews.map((rev) => (
+                                <div 
+                                    key={rev.id} 
+                                    style={{ 
+                                        background: 'var(--ld-bg-subtle)', 
+                                        border: '1px solid var(--ld-border-subtle)', 
+                                        borderRadius: 'var(--ld-radius-md)', 
+                                        padding: '16px' 
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontWeight: '700', color: '#ffffff', fontSize: '14px' }}>
+                                                {rev.user?.name || 'Usuário'}
+                                            </span>
+                                            {rev.verdict && (
+                                                <span className="badge type" style={{ fontSize: '10px', textTransform: 'uppercase' }}>
+                                                    {rev.verdict}
+                                                </span>
+                                            )}
+                                            {rev.score && (
+                                                <span style={{ fontSize: '12px', color: 'var(--ld-primary-light)', fontWeight: '600' }}>
+                                                    ★ {rev.score}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <span style={{ fontSize: '11px', color: 'var(--ld-text-muted)' }}>
+                                                {new Date(rev.created_at).toLocaleDateString('pt-BR')}
+                                            </span>
+                                            <button 
+                                                type="button" 
+                                                onClick={() => handleDeleteComment(rev.id)} 
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', padding: '2px' }}
+                                                title="Excluir comentário"
+                                            >
+                                                <Icons.Trash />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p style={{ margin: 0, color: 'var(--ld-text-secondary)', fontSize: '13px', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+                                        {rev.comment}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </section>
             </div>
 

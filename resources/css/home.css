@@ -1,5 +1,15 @@
-* { box-sizing: border-box; }
-body { background: radial-gradient(1200px 600px at 20% -10%, #2e2a6b 0%, transparent 60%), linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); background-attachment: fixed; color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; margin: 0; min-height: 100vh; }
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background: radial-gradient(1200px 600px at 20% -10%, #2e2a6b 0%, transparent 60%), linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    background-attachment: fixed;
+    color: #f8fafc;
+    font-family: 'Inter', system-ui, sans-serif;
+    margin: 0;
+    min-height: 100vh;
+}
 
 /* Botões e Inputs Básicos */
 .btn-primary { background: #6366f1; color: white; padding: 12px 24px; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; white-space: nowrap; }
@@ -29,7 +39,7 @@ body { background: radial-gradient(1200px 600px at 20% -10%, #2e2a6b 0%, transpa
 .chip.active { background: #6366f1; border-color: #6366f1; color: white; }
 .link-btn { background: none; border: none; color: #a5b4fc; cursor: pointer; font-size: 13px; text-decoration: underline; }
 
-/* Seções e Carrossel */
+/* Seções e Carrossel (Blindado contra o Bootstrap) */
 .section { margin-bottom: 44px; }
 .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 10px; }
 .section-title { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; margin: 0; color: #f1f5f9; }
@@ -37,12 +47,25 @@ body { background: radial-gradient(1200px 600px at 20% -10%, #2e2a6b 0%, transpa
 .section-count { font-size: 12px; font-weight: 600; color: #a5b4fc; background: rgba(99, 102, 241, 0.18); padding: 3px 10px; border-radius: 999px; }
 
 .carousel-container { position: relative; display: flex; align-items: center; }
-.carousel { display: flex; overflow-x: auto; gap: 22px; scroll-snap-type: x mandatory; padding: 6px 4px 20px; scroll-behavior: smooth; width: 100%; }
+.carousel { display: flex !important; overflow-x: auto; gap: 22px; scroll-snap-type: x mandatory; padding: 6px 4px 20px; scroll-behavior: smooth; width: 100%; }
 .carousel::-webkit-scrollbar { height: 8px; }
 .carousel::-webkit-scrollbar-track { background: transparent; }
 .carousel::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
 .carousel:hover::-webkit-scrollbar-thumb { background: #475569; }
-.carousel-item { min-width: 220px; max-width: 220px; scroll-snap-align: start; flex-shrink: 0; }
+
+.carousel .carousel-item {
+    display: flex !important;
+    flex-direction: column;
+    float: none !important;
+    margin-right: 0 !important;
+    min-width: 220px !important;
+    max-width: 220px !important;
+    width: 220px !important;
+    scroll-snap-align: start;
+    flex-shrink: 0 !important;
+    backface-visibility: visible !important;
+    transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+}
 
 .scroll-btn { position: absolute; z-index: 10; top: 35%; transform: translateY(-50%); width: 44px; height: 44px; background: rgba(15, 23, 42, 0.85); border: 1px solid #475569; color: white; border-radius: 50%; font-size: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); transition: 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
 .scroll-btn:hover { background: #6366f1; border-color: #6366f1; }
@@ -58,12 +81,12 @@ body { background: radial-gradient(1200px 600px at 20% -10%, #2e2a6b 0%, transpa
 .loredex-card:hover .cover img { transform: scale(1.06); }
 
 .badges { position: absolute; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 2; pointer-events: none; }
-.badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; backdrop-filter: blur(4px); }
+.badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; backdrop-filter: blur(4px); width: fit-content; }
 .badge.type { background: rgba(99, 102, 241, 0.85); color: white; border: 1px solid rgba(255,255,255,0.2); }
 .badge.status { background: rgba(15, 23, 42, 0.75); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1); }
 
 .card-content { padding: 16px; flex-grow: 1; display: flex; flex-direction: column; border-top: 2px solid #334155; }
-.card-content h3, .card-content h4 { margin: 0 0 8px 0; font-size: 16px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-content h3, .card-content h4 { margin: 0 0 8px 0; font-size: 16px; line-height: 1.25; color: #f8fafc; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .card-content p { color: #94a3b8; font-size: 13px; margin: 0; line-height: 1.45; }
 
 /* Ações do Card */
@@ -80,13 +103,30 @@ body { background: radial-gradient(1200px 600px at 20% -10%, #2e2a6b 0%, transpa
 .skeleton { height: 420px; border-radius: 18px; background: linear-gradient(90deg, #1e293b 25%, #273449 50%, #1e293b 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 
-/* Modais Base */
-.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
-.modal { background: #1e293b; padding: 36px; border-radius: 24px; width: 100%; max-width: 500px; position: relative; border: 1px solid #475569; }
+/* Modais Base (Blindados contra o Bootstrap) */
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1055; padding: 20px; }
+.modal-bg .modal {
+    display: block !important;
+    background: #1e293b;
+    padding: 36px;
+    border-radius: 24px;
+    width: 100%;
+    max-width: 500px;
+    height: auto !important;
+    position: relative !important;
+    inset: auto !important;
+    border: 1px solid #475569;
+    overflow: visible;
+}
 .modal-close { position: absolute; top: 18px; right: 18px; background: transparent; color: #94a3b8; border: none; cursor: pointer; font-size: 20px; }
 
-/* Modal da Página de Detalhes (Nova interface estilo MyAnimeList) */
-.details-modal { max-width: 800px; padding: 0; overflow: hidden; display: flex; }
+/* Modal da Página de Detalhes */
+.modal-bg .modal.details-modal {
+    display: flex !important;
+    max-width: 800px;
+    padding: 0;
+    overflow: hidden;
+}
 .details-cover-container { width: 300px; position: relative; flex-shrink: 0; }
 .details-cover-container img { width: 100%; height: 100%; object-fit: cover; display: block; min-height: 400px; }
 .details-info { padding: 36px; flex-grow: 1; display: flex; flex-direction: column; max-height: 600px; overflow-y: auto; }
@@ -94,14 +134,12 @@ body { background: radial-gradient(1200px 600px at 20% -10%, #2e2a6b 0%, transpa
 .details-info .badges-row { display: flex; gap: 10px; margin-bottom: 24px; position: relative; inset: auto; }
 .details-synopsis { color: #cbd5e1; line-height: 1.7; font-size: 15px; background: rgba(15, 23, 42, 0.4); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
 
-/* Estilo da barra de rolagem interna na sinopse/info */
 .details-info::-webkit-scrollbar { width: 8px; }
 .details-info::-webkit-scrollbar-track { background: transparent; }
 .details-info::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
 
-/* Responsividade para o Modal de Detalhes */
 @media (max-width: 700px) {
-    .details-modal { flex-direction: column; }
+    .modal-bg .modal.details-modal { flex-direction: column; }
     .details-cover-container { width: 100%; height: 250px; }
     .details-info { padding: 24px; }
 }
@@ -110,68 +148,12 @@ body { background: radial-gradient(1200px 600px at 20% -10%, #2e2a6b 0%, transpa
    BOTÃO DE SAIR (LOGOUT) E MODAL DE CONFIRMAÇÃO
 ================================================== */
 
-.logout-container {
-  position: fixed;
-  top: 20px;
-  right: 25px;
-  z-index: 500;
-}
+.logout-container { position: fixed; top: 20px; right: 25px; z-index: 500; }
+.logout-button { background: rgba(15, 23, 42, 0.85); color: #cbd5e1; border: 1px solid #475569; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+.logout-button:hover { background: #ef4444; border-color: #ef4444; color: white; }
 
-.logout-button {
-  background: rgba(15, 23, 42, 0.85);
-  color: #cbd5e1;
-  border: 1px solid #475569;
-  padding: 10px 18px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.logout-button:hover {
-  background: #ef4444;
-  border-color: #ef4444;
-  color: white;
-}
-
-/* Modal específico de confirmação de saída */
-.logout-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(5px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  padding: 20px;
-}
-
-.logout-dialog {
-  width: 100%;
-  max-width: 420px;
-  background: #1e293b;
-  border: 1px solid #475569;
-  border-radius: 20px;
-  padding: 30px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-}
-
-.logout-title {
-  margin: 0 0 12px;
-  color: #f8fafc;
-  font-size: 22px;
-}
-
-.logout-text {
-  margin: 0 0 28px;
-  color: #94a3b8;
-  line-height: 1.5;
-}
-
-.logout-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
+.logout-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 20px; }
+.logout-dialog { width: 100%; max-width: 420px; background: #1e293b; border: 1px solid #475569; border-radius: 20px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+.logout-title { margin: 0 0 12px; color: #f8fafc; font-size: 22px; }
+.logout-text { margin: 0 0 28px; color: #94a3b8; line-height: 1.5; }
+.logout-actions { display: flex; justify-content: flex-end; gap: 12px; }

@@ -21,6 +21,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Capítulos de uma obra (leitura)
     Route::get('/works/{work}/chapters', [ChapterController::class, 'index']);
 
+    // Rotas de Comentários e Avaliações da Obra
+    Route::get('/works/{workId}/reviews', [WorkReviewController::class, 'index']);
+    Route::post('/works/{workId}/reviews', [WorkReviewController::class, 'store']);
+    Route::delete('/works/{workId}/reviews/{reviewId}', [WorkReviewController::class, 'destroy']);
+
     // Só administrador
     Route::middleware('admin')->group(function () {
         Route::post('/works', [WorkController::class, 'store']);
