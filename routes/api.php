@@ -18,6 +18,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/works', [WorkController::class, 'index']);
     Route::get('/works/{work}', [WorkController::class, 'show']);
+    Route::post('/works/sync-all', [WorkController::class, 'syncMetadata']);
+    Route::post('/works/{work}/sync', [WorkController::class, 'syncMetadata']);
+    Route::patch('/works/{work}/chapters-count', [WorkController::class, 'update']);
 
     // Capítulos de uma obra (leitura)
     Route::get('/works/{work}/chapters', [ChapterController::class, 'index']);

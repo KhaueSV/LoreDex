@@ -147,11 +147,15 @@ export const createWork = async (workData) => {
         body: JSON.stringify(workData),
     });
 
+    const data = await response.json().catch(() => ({}));
+
     if (!response.ok) {
-        throw new Error('Erro ao adicionar a obra.');
+        const err = new Error(data.message || 'Erro ao adicionar a obra.');
+        err.status = response.status;
+        throw err;
     }
 
-    return response.json();
+    return data;
 };
 
 // EDITAR uma obra (PUT)
@@ -164,6 +168,36 @@ export const updateWork = async (id, workData) => {
 
     if (!response.ok) {
         throw new Error('Erro ao atualizar a obra.');
+    }
+
+    return response.json();
+};
+
+// ATUALIZAR total de capítulos de uma obra (PATCH)
+export const updateWorkChaptersCount = async (id, totalChapters) => {
+    const response = await fetch(`${API_URL}/works/${id}/chapters-count`, {
+        method: 'PATCH',
+        headers: headers(),
+        body: JSON.stringify({ total_chapters: totalChapters }),
+    });
+
+    if (!response.ok) {
+        throw new Error('Erro ao atualizar capítulos da obra.');
+    }
+
+    return response.json();
+};
+
+// SINCRONIZAR metadados de uma obra ou de todas (gêneros, capítulos, tradução)
+export const syncWorkMetadata = async (id = null) => {
+    const url = id ? `${API_URL}/works/${id}/sync` : `${API_URL}/works/sync-all`;
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: headers(),
+    });
+
+    if (!response.ok) {
+        throw new Error('Erro ao sincronizar metadados.');
     }
 
     return response.json();

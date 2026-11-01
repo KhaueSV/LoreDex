@@ -6,7 +6,10 @@ import {
     createWorkReview,
     updateWorkReview,
     deleteWorkReview,
+    updateWorkChaptersCount,
+    syncWorkMetadata,
 } from '../services/api';
+import { translateFormat, translateStatus } from '../components/app';
 
 const Icons = {
     ArrowLeft: () => (
@@ -140,10 +143,46 @@ function getScoreTierClass(score) {
     return 'score-tier-low';
 }
 
-export default function TelaCapitulos({ work, onBack }) {
+export default function TelaCapitulos({ work, onBack, onWorkUpdated }) {
     const progressKey = `loredex_progress_work_${work?.id}`;
     const evaluationKey = `loredex_eval_work_${work?.id}`;
-    const totalChapters = Number(work?.total_chapters) || 0;
+    const [totalChapters, setTotalChapters] = useState(Number(work?.total_chapters) || 0);
+    const [editingTotalChapters, setEditingTotalChapters] = useState(false);
+    const [totalChaptersInput, setTotalChaptersInput] = useState(String(Number(work?.total_chapters) || ''));
+    const [syncingChapters, setSyncingChapters] = useState(false);
+
+    useEffect(() => {
+        const currentTotal = Number(work?.total_chapters) || 0;
+        setTotalChapters(currentTotal);
+        setTotalChaptersInput(currentTotal > 0 ? String(currentTotal) : '');
+
+        if (currentTotal <= 0 && work?.id) {
+            setSyncingChapters(true);
+            syncWorkMetadata(work.id)
+                .then((updated) => {
+                    if (updated && Number(updated.total_chapters) > 0) {
+                        setTotalChapters(Number(updated.total_chapters));
+                        setTotalChaptersInput(String(updated.total_chapters));
+                        if (onWorkUpdated) onWorkUpdated(updated);
+                    }
+                })
+                .catch(() => {})
+                .finally(() => setSyncingChapters(false));
+        }
+    }, [work?.id, work?.total_chapters]);
+
+    async function handleSaveTotalChapters() {
+        const parsed = Math.max(0, Number(totalChaptersInput) || 0);
+        try {
+            const updated = await updateWorkChaptersCount(work.id, parsed);
+            setTotalChapters(parsed);
+            setEditingTotalChapters(false);
+            if (onWorkUpdated && updated) onWorkUpdated(updated);
+            showToast('Total de capítulos atualizado!');
+        } catch (error) {
+            showToast('Erro ao atualizar o total de capítulos.');
+        }
+    }
 
     const [chaptersRead, setChaptersRead] = useState(() => {
         const saved = localStorage.getItem(progressKey);
@@ -432,7 +471,7 @@ export default function TelaCapitulos({ work, onBack }) {
                                 LoreDex Tracker
                             </span>
                             {work?.type && (
-                                <span className="badge-type">{work.type}</span>
+                                <span className="badge-type">{translateFormat(work.type)}</span>
                             )}
                         </div>
 
@@ -440,16 +479,47 @@ export default function TelaCapitulos({ work, onBack }) {
                             <h1>{work?.title || 'Obra sem título'}</h1>
                             <div className="work-status">
                                 <span className="work-status-indicator" />
-                                <span>{work?.status || 'Status não informado'}</span>
+                                <span>{work?.status ? translateStatus(work.status) : 'Status não informado'}</span>
                             </div>
                         </div>
                     </div>
 
                     <div className="chapters-stats">
                         <div className="stat-item">
-                            <span className="stat-value">
-                                {totalChapters > 0 ? totalChapters : '—'}
-                            </span>
+                            {editingTotalChapters ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={totalChaptersInput}
+                                        onChange={(e) => setTotalChaptersInput(e.target.value)}
+                                        className="chapter-number-input"
+                                        style={{ width: '58px', padding: '2px 4px', border: '1px solid var(--ld-border-focus)', borderRadius: '4px' }}
+                                        autoFocus
+                                    />
+                                    <button
+                                        type="button"
+                                        className="btn-chip"
+                                        style={{ padding: '3px 7px', fontSize: '11px' }}
+                                        onClick={handleSaveTotalChapters}
+                                    >
+                                        OK
+                                    </button>
+                                </div>
+                            ) : (
+                                <span
+                                    className="stat-value"
+                                    style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                                    onClick={() => {
+                                        setTotalChaptersInput(totalChapters > 0 ? String(totalChapters) : '');
+                                        setEditingTotalChapters(true);
+                                    }}
+                                    title="Clique para editar o total de capítulos"
+                                >
+                                    {syncingChapters ? '...' : totalChapters > 0 ? totalChapters : 'Definir'}
+                                    <span style={{ fontSize: '11px', opacity: 0.6 }}>✎</span>
+                                </span>
+                            )}
                             <span className="stat-label">Capítulos</span>
                         </div>
                         <div className="stat-item">

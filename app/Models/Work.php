@@ -10,7 +10,25 @@ class Work extends Model
     use HasFactory;
 
     // Campos que permitimos cadastrar via formulário/API
-   protected $fillable = ['title', 'description', 'cover_image', 'type', 'status', 'is_adult', 'genres', 'source_url'];
+    protected $fillable = [
+        'title',
+        'synopsis',
+        'cover_url',
+        'type',
+        'status',
+        'is_adult',
+        'genres',
+        'source_url',
+        'total_chapters',
+        'author',
+    ];
+
+    protected $casts = [
+        'genres' => 'array',
+        'is_adult' => 'boolean',
+        'total_chapters' => 'integer',
+    ];
+
     // Relacionamento: Uma obra (Work) possui MUITOS capítulos (Chapters)
     public function chapters()
     {

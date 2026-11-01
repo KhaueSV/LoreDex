@@ -2,11 +2,77 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import Login from '../pages/Login';
 import AdminPanel from '../pages/AdminPanel';
 import '../../css/home.css';
-import { getWorks, createWork, updateWork, deleteWork, getToken, logout, getMe } from '../services/api';
+import { getWorks, createWork, updateWork, deleteWork, getToken, logout, getMe, syncWorkMetadata } from '../services/api';
 import TelaCapitulos from '../pages/TelaCapitulos';
 import UserMenu from './UserMenu';
 
 const PLACEHOLDER = 'https://via.placeholder.com/220x320/0f172a/6366f1?text=Sem+Capa';
+
+// ---------------- DICIONÁRIOS DE TRADUÇÃO (PT-BR) ----------------
+export const GENRE_TRANSLATIONS = {
+    'Action': 'Ação',
+    'Adventure': 'Aventura',
+    'Comedy': 'Comédia',
+    'Drama': 'Drama',
+    'Fantasy': 'Fantasia',
+    'Romance': 'Romance',
+    'Sci-Fi': 'Ficção Científica',
+    'Slice of Life': 'Cotidiano',
+    'Mystery': 'Mistério',
+    'Horror': 'Terror',
+    'Supernatural': 'Sobrenatural',
+    'Psychological': 'Psicológico',
+    'Sports': 'Esportes',
+    'Thriller': 'Suspense',
+    'Mecha': 'Mecha',
+    'Music': 'Música',
+    'Ecchi': 'Ecchi',
+    'Mahou Shoujo': 'Garota Mágica',
+};
+
+export const translateGenre = (genre) => {
+    if (!genre) return '';
+    const trimmed = String(genre).trim();
+    const matchKey = Object.keys(GENRE_TRANSLATIONS).find(
+        (k) => k.toLowerCase() === trimmed.toLowerCase()
+    );
+    return matchKey ? GENRE_TRANSLATIONS[matchKey] : trimmed;
+};
+
+export const translateFormat = (type) => {
+    const upper = String(type || '').toUpperCase();
+    if (upper === 'MANGA') return 'Mangá';
+    if (upper === 'NOVEL') return 'Novel';
+    if (upper === 'WEBNOVEL') return 'Webnovel';
+    if (upper === 'ONE_SHOT') return 'One-Shot';
+    return type || 'Novel';
+};
+
+export const translateStatus = (status) => {
+    const upper = String(status || '').toUpperCase();
+    if (['RELEASING', 'ONGOING', 'LANCANDO', 'A LANÇAR'].includes(upper)) return 'Em Lançamento';
+    if (['FINISHED', 'COMPLETED', 'CONCLUÍDO', 'CONCLUIDO'].includes(upper)) return 'Concluído';
+    if (['CANCELLED', 'DROPPED', 'CANCELADO'].includes(upper)) return 'Cancelado';
+    if (upper === 'HIATUS') return 'Em Hiato';
+    if (upper === 'NOT_YET_RELEASED') return 'Não Lançado';
+    return status || 'Em Lançamento';
+};
+
+export const parseGenres = (genresField) => {
+    try {
+        if (Array.isArray(genresField)) return genresField;
+        if (typeof genresField === 'string' && genresField.trim() !== '') {
+            const parsed = JSON.parse(genresField);
+            if (Array.isArray(parsed)) return parsed;
+            return genresField.split(',').map((s) => s.trim()).filter(Boolean);
+        }
+    } catch {
+        if (typeof genresField === 'string') {
+            return genresField.split(',').map((s) => s.trim()).filter(Boolean);
+        }
+    }
+    return [];
+};
 
 // ---------------- ÍCONES ----------------
 const Icons = {
@@ -46,27 +112,49 @@ const CarouselSection = ({ title, icon, works, loading, onEdit, onDelete, onClic
                     <button className="scroll-btn left" onClick={() => scroll('left')}>‹</button>
                     
                     <div className="carousel" ref={carouselRef}>
-                        {works.map((work) => (
-                            <article key={work.id} className="loredex-card carousel-item" onClick={() => onClickWork(work)}>
-                                <div className="cover">
-                                    <img src={work.cover_url || PLACEHOLDER} alt={`Capa de ${work.title}`} />
-                                    
-                                    <div className="badges">
-                                        {work.type && <span className="badge type">{work.type}</span>}
-                                        {work.status && <span className="badge status">{work.status}</span>}
-                                    </div>
+                        {works.map((work) => {
+                            const workGenres = parseGenres(work.genres);
+                            return (
+                                <article key={work.id} className="loredex-card carousel-item" onClick={() => onClickWork(work)}>
+                                    <div className="cover">
+                                        <img src={work.cover_url || PLACEHOLDER} alt={`Capa de ${work.title}`} />
+                                        
+                                        <div className="badges">
+                                            {work.type && <span className="badge type">{translateFormat(work.type)}</span>}
+                                            {work.status && <span className="badge status">{translateStatus(work.status)}</span>}
+                                        </div>
 
-                                    <div className="card-actions" onClick={(e) => e.stopPropagation()}>
-                                        <button className="action-btn edit" onClick={() => onEdit(work)}>✎ Editar</button>
-                                        <button className="action-btn delete" onClick={() => onDelete(work)}>🗑 Excluir</button>
+                                        <div className="card-actions" onClick={(e) => e.stopPropagation()}>
+                                            <button className="action-btn edit" onClick={() => onEdit(work)}>✎ Editar</button>
+                                            <button className="action-btn delete" onClick={() => onDelete(work)}>🗑 Excluir</button>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="card-content">
-                                    <h3>{work.title}</h3>
-                                    <p>{work.synopsis ? work.synopsis.substring(0, 70) + '...' : 'Sem sinopse.'}</p>
-                                </div>
-                            </article>
-                        ))}
+                                    <div className="card-content">
+                                        <h3>{work.title}</h3>
+                                        {workGenres.length > 0 && (
+                                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                                                {workGenres.slice(0, 3).map((g) => (
+                                                    <span
+                                                        key={g}
+                                                        style={{
+                                                            fontSize: '10px',
+                                                            padding: '2px 6px',
+                                                            borderRadius: '4px',
+                                                            background: 'rgba(99, 102, 241, 0.2)',
+                                                            color: '#a5b4fc',
+                                                            fontWeight: 600,
+                                                        }}
+                                                    >
+                                                        {translateGenre(g)}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <p>{work.synopsis ? work.synopsis.substring(0, 70) + '...' : 'Sem sinopse.'}</p>
+                                    </div>
+                                </article>
+                            );
+                        })}
                     </div>
 
                     <button className="scroll-btn right" onClick={() => scroll('right')}>›</button>
@@ -91,7 +179,7 @@ function Home({ isAdmin }) {
     const [filterFormat, setFilterFormat] = useState('todos');
     const [filterStatus, setFilterStatus] = useState('todos');
     
-    // NOVO: Filtro múltiplo de Gêneros
+    // Filtro múltiplo de Gêneros (guarda a chave em inglês para bater com o AniList/banco, mas exibe em PT-BR)
     const [selectedGenres, setSelectedGenres] = useState([]);
     const availableGenres = ['Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Romance', 'Sci-Fi', 'Slice of Life', 'Mystery'];
 
@@ -102,12 +190,26 @@ function Home({ isAdmin }) {
     const [manualCover, setManualCover] = useState('');
     const [manualDesc, setManualDesc] = useState('');
     const [manualSourceUrl, setManualSourceUrl] = useState('');
+    const [manualChapters, setManualChapters] = useState('');
+    const [manualType, setManualType] = useState('manga');
+    const [manualStatus, setManualStatus] = useState('ongoing');
+    const [manualGenres, setManualGenres] = useState([]);
 
     const [workToDelete, setWorkToDelete] = useState(null);
-    
     const [workDetails, setWorkDetails] = useState(null);
-
     const [viewingChaptersWork, setViewingChaptersWork] = useState(null);
+    const [savingWorkKey, setSavingWorkKey] = useState(null);
+
+    const normalizeTitle = (t) => String(t || '').trim().toLowerCase();
+
+    const isNovelInLibrary = (novel) => {
+        const romaji = normalizeTitle(novel?.title?.romaji);
+        const english = normalizeTitle(novel?.title?.english);
+        return allWorks.some((w) => {
+            const wTitle = normalizeTitle(w.title);
+            return wTitle && (wTitle === romaji || (english && wTitle === english));
+        });
+    };
 
     // ---------------- FUNÇÕES BASE ----------------
     const fetchMyNovels = async () => {
@@ -115,6 +217,18 @@ function Home({ isAdmin }) {
         try {
             const data = await getWorks();
             setAllWorks(data);
+
+            // Se alguma obra estiver sem gêneros ou sem capítulos, sincroniza automaticamente em segundo plano
+            const needsAutoSync = Array.isArray(data) && data.some(
+                (w) => parseGenres(w.genres).length === 0 || Number(w.total_chapters) <= 0
+            );
+            if (needsAutoSync) {
+                syncWorkMetadata()
+                    .then((updated) => {
+                        if (Array.isArray(updated)) setAllWorks(updated);
+                    })
+                    .catch(() => {});
+            }
         } catch (err) {
             console.error('Erro:', err);
         } finally {
@@ -125,8 +239,6 @@ function Home({ isAdmin }) {
     useEffect(() => { fetchMyNovels(); }, []);
 
     // ---------------- FILTROS ----------------
-    // Verifica se algum filtro está ativo
-    // ---------------- FILTROS ----------------
     const isFiltering = filterText.trim() !== '' || libraryShowAdult || filterFormat !== 'todos' || filterStatus !== 'todos' || selectedGenres.length > 0 || sortBy !== 'padrao';
 
     const applyFilter = (list) => {
@@ -136,8 +248,27 @@ function Home({ isAdmin }) {
             // 1. Busca por texto
             const bateTexto = !termo || (w.title || '').toLowerCase().includes(termo) || (w.synopsis || '').toLowerCase().includes(termo);
             
-            // 2. Filtro +18 (Garante que entende 1, "1" ou true do Laravel)
-            const isAdultWork = w.is_adult === true || w.is_adult === 1 || w.is_adult === '1';
+            // 5. Filtro de Gêneros (Suporta nomes em Inglês ou Português salvos no banco)
+            const obraGeneros = parseGenres(w.genres);
+            const generosNormalized = obraGeneros.flatMap((g) => {
+                const upper = String(g).trim().toUpperCase();
+                const translated = translateGenre(g).toUpperCase();
+                return [upper, translated];
+            });
+
+            // 2. Filtro +18 (Verifica flag is_adult, gêneros Hentai/Ecchi/Adult/Smut/Erotica ou menção a hentai na sinopse/título)
+            const hasAdultGenre = generosNormalized.some((g) =>
+                ['HENTAI', 'ECCHI', 'ADULT', 'ADULTO', 'SMUT', 'EROTICA', '+18'].includes(g)
+            );
+            const hasAdultText = /\b(hentai|ecchi|\+18|nsfw|erótico|erotico)\b/i.test(
+                `${w.title || ''} ${w.synopsis || ''}`
+            );
+            const isAdultWork =
+                w.is_adult === true ||
+                w.is_adult === 1 ||
+                w.is_adult === '1' ||
+                hasAdultGenre ||
+                hasAdultText;
             const bateAdulto = libraryShowAdult ? true : !isAdultWork;
             
             // 3. Filtro de Formato (Ignora diferenças de maiúsculas/minúsculas)
@@ -150,27 +281,18 @@ function Home({ isAdmin }) {
             if (filterStatus === 'todos') {
                 bateStatus = true;
             } else if (filterStatus === 'RELEASING') {
-                bateStatus = ['RELEASING', 'ONGOING', 'LANCANDO', 'A LANÇAR'].includes(safeStatus);
+                bateStatus = ['RELEASING', 'ONGOING', 'LANCANDO', 'A LANÇAR', 'EM LANÇAMENTO'].includes(safeStatus);
             } else if (filterStatus === 'FINISHED') {
                 bateStatus = ['FINISHED', 'COMPLETED', 'CONCLUÍDO', 'CONCLUIDO'].includes(safeStatus);
             } else {
                 bateStatus = safeStatus === filterStatus.toUpperCase();
             }
             
-            // 5. Filtro de Gêneros (Evita que o app quebre se o campo estiver vazio ou errado no banco)
-            let obraGeneros = [];
-            try {
-                if (Array.isArray(w.genres)) {
-                    obraGeneros = w.genres;
-                } else if (typeof w.genres === 'string') {
-                    obraGeneros = JSON.parse(w.genres || '[]');
-                }
-            } catch (e) {
-                obraGeneros = []; // Se não conseguir ler, assume que não tem gênero
-            }
-            // Põe tudo em maiúsculo para comparar sem erro (Action === ACTION)
-            const generosUpper = obraGeneros.map(g => g.toUpperCase());
-            const bateGeneros = selectedGenres.length === 0 || selectedGenres.every(g => generosUpper.includes(g.toUpperCase()));
+            const bateGeneros = selectedGenres.length === 0 || selectedGenres.every((g) => {
+                const targetEn = g.toUpperCase();
+                const targetPt = translateGenre(g).toUpperCase();
+                return generosNormalized.includes(targetEn) || generosNormalized.includes(targetPt);
+            });
 
             return bateTexto && bateAdulto && bateFormato && bateStatus && bateGeneros;
         });
@@ -187,10 +309,10 @@ function Home({ isAdmin }) {
         const filteredWorks = applyFilter(allWorks);
         if (isFiltering) return [{ title: 'Resultados da Biblioteca', icon: <Icons.Search />, works: filteredWorks }];
         
-        const recentes = [...allWorks].sort((a, b) => b.id - a.id).slice(0, 10);
+        const recentes = [...filteredWorks].sort((a, b) => b.id - a.id).slice(0, 10);
         return [
             { title: 'Adicionados Recentemente', icon: <Icons.Recent />, works: recentes },
-            { title: 'Todas as Obras', icon: <Icons.Library />, works: allWorks }
+            { title: 'Todas as Obras', icon: <Icons.Library />, works: filteredWorks }
         ];
     }, [allWorks, filterText, sortBy, libraryShowAdult, filterFormat, filterStatus, selectedGenres, isFiltering]);
 
@@ -205,6 +327,80 @@ function Home({ isAdmin }) {
         setSelectedGenres([]); 
     };
 
+    // ---------------- TRADUÇÃO E FALLBACK DE CAPÍTULOS ----------------
+    const translateSynopsisToPt = async (text) => {
+        if (!text || !text.trim()) return 'Sem sinopse disponível.';
+        const clean = text.replace(/<[^>]+>/g, '').replace(/\(Source:[^)]+\)/gi, '').trim();
+        if (!clean) return 'Sem sinopse disponível.';
+
+        try {
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=pt&dt=t&q=${encodeURIComponent(clean)}`;
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data) && Array.isArray(data[0])) {
+                    const translated = data[0].map((part) => part[0] || '').join('');
+                    if (translated.trim()) return translated.trim();
+                }
+            }
+        } catch (err) {
+            console.warn('Falha ao traduzir no cliente, o servidor tentará traduzir:', err);
+        }
+        return clean;
+    };
+
+    const fetchChaptersFromJikanOrMangaDex = async (title) => {
+        if (!title) return 0;
+        // 1. Jikan (MyAnimeList)
+        try {
+            const res = await fetch(`https://api.jikan.moe/v4/manga?q=${encodeURIComponent(title)}&limit=3`);
+            if (res.ok) {
+                const json = await res.json();
+                const items = json?.data || [];
+                for (const item of items) {
+                    if (item.chapters && Number(item.chapters) > 0) {
+                        return Number(item.chapters);
+                    }
+                }
+            }
+        } catch {
+            // Continua para MangaDex
+        }
+
+        // 2. MangaDex
+        try {
+            const res = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(title)}&limit=1&order[relevance]=desc`);
+            if (res.ok) {
+                const json = await res.json();
+                const manga = json?.data?.[0];
+                if (manga?.id) {
+                    const lastChap = Number(manga?.attributes?.lastChapter);
+                    if (lastChap > 0) return lastChap;
+
+                    const aggRes = await fetch(`https://api.mangadex.org/manga/${manga.id}/aggregate`);
+                    if (aggRes.ok) {
+                        const aggJson = await aggRes.json();
+                        const volumes = aggJson?.volumes || {};
+                        let maxChap = 0;
+                        Object.values(volumes).forEach((vol) => {
+                            Object.keys(vol?.chapters || {}).forEach((chKey) => {
+                                const num = Math.floor(Number(chKey));
+                                if (!Number.isNaN(num) && num > maxChap) {
+                                    maxChap = num;
+                                }
+                            });
+                        });
+                        if (maxChap > 0) return maxChap;
+                    }
+                }
+            }
+        } catch {
+            // Ignora erro
+        }
+
+        return 0;
+    };
+
     // ---------------- BUSCA ANILIST E LIMPEZA ----------------
     const handleSearchAniList = async (valor, adult = showAdult) => {
         const busca = valor.trim();
@@ -214,7 +410,7 @@ function Home({ isAdmin }) {
             query ($search: String, $isAdult: Boolean, $genreNotIn: [String]) {
                 Page(page: 1, perPage: 4) {
                     media(search: $search, type: MANGA, isAdult: $isAdult, genre_not_in: $genreNotIn) {
-                        id title { romaji } coverImage { extraLarge } description(asHtml: false) format status isAdult genres chapters
+                        id title { romaji english } coverImage { extraLarge } description(asHtml: false) format status isAdult genres chapters
                     }
                 }
             }
@@ -228,7 +424,7 @@ function Home({ isAdmin }) {
                 body: JSON.stringify({ query, variables })
             });
             const result = await response.json();
-            setSearchResults(result.data.Page.media);
+            setSearchResults(result?.data?.Page?.media || []);
         } catch (error) {
             console.error('Erro na API:', error);
         }
@@ -259,42 +455,108 @@ function Home({ isAdmin }) {
             await createWork(dados);
             await fetchMyNovels();
             clearSearch();
-        } catch (error) { alert('Erro ao salvar no banco.'); }
+            return true;
+        } catch (error) {
+            alert(error.message || 'Erro ao salvar no banco.');
+            return false;
+        }
     };
 
-    const handleSaveFromApi = (novel) => {
-        enviarParaLaravel({
-            title: novel.title.romaji,
-            cover_image: novel.coverImage.extraLarge,
-            description: novel.description ? novel.description.replace(/<[^>]+>/g, '') : 'Sem sinopse disponível.',
-            type: novel.format || 'Novel',
-            status: novel.status || 'Concluído',
-            is_adult: novel.isAdult || false,
-            genres: JSON.stringify(novel.genres || []),
-            total_chapters: novel.chapters || 0
-        });
+    const handleSaveFromApi = async (novel) => {
+        if (savingWorkKey !== null) return;
+        if (isNovelInLibrary(novel)) {
+            alert('Esta obra já está na sua biblioteca!');
+            return;
+        }
+
+        setSavingWorkKey(novel.id);
+        try {
+            const rawDesc = novel.description ? novel.description.replace(/<[^>]+>/g, '') : '';
+            const translatedDesc = await translateSynopsisToPt(rawDesc);
+
+            let totalChapters = Number(novel.chapters) || 0;
+            if (totalChapters <= 0) {
+                totalChapters = await fetchChaptersFromJikanOrMangaDex(novel.title?.english || novel.title?.romaji);
+            }
+
+            await enviarParaLaravel({
+                title: novel.title.romaji,
+                cover_image: novel.coverImage.extraLarge,
+                description: translatedDesc,
+                type: novel.format || 'MANGA',
+                status: novel.status || 'RELEASING',
+                is_adult: novel.isAdult || false,
+                genres: novel.genres || [],
+                total_chapters: totalChapters
+            });
+        } finally {
+            setSavingWorkKey(null);
+        }
     };
 
-    const resetForm = () => { setShowForm(false); setEditingId(null); setManualTitle(''); setManualCover(''); setManualDesc(''); setManualSourceUrl('');};
+    const resetForm = () => {
+        setShowForm(false);
+        setEditingId(null);
+        setManualTitle('');
+        setManualCover('');
+        setManualDesc('');
+        setManualSourceUrl('');
+        setManualChapters('');
+        setManualType('manga');
+        setManualStatus('ongoing');
+        setManualGenres([]);
+    };
+
     const openCreate = () => { resetForm(); setShowForm(true); };
     
     const openEdit = (work) => {
-        setEditingId(work.id); setManualTitle(work.title || ''); setManualCover(work.cover_url || ''); setManualDesc(work.synopsis || ''); setManualSourceUrl(work.source_url || ''); setShowForm(true);
+        setEditingId(work.id);
+        setManualTitle(work.title || '');
+        setManualCover(work.cover_url || '');
+        setManualDesc(work.synopsis || '');
+        setManualSourceUrl(work.source_url || '');
+        setManualChapters(work.total_chapters ? String(work.total_chapters) : '');
+        setManualType((work.type || 'manga').toLowerCase());
+        setManualStatus((work.status || 'ongoing').toLowerCase());
+        setManualGenres(parseGenres(work.genres));
+        setShowForm(true);
     };
 
     const handleSubmitForm = async (e) => {
         e.preventDefault();
+        if (savingWorkKey !== null) return;
+
+        if (!editingId) {
+            const target = normalizeTitle(manualTitle);
+            if (allWorks.some((w) => normalizeTitle(w.title) === target)) {
+                alert('Esta obra já está na sua biblioteca!');
+                return;
+            }
+        }
+
         const dados = { 
             title: manualTitle, 
             cover_image: manualCover, 
             description: manualDesc,
-            source_url: manualSourceUrl 
+            source_url: manualSourceUrl,
+            total_chapters: Number(manualChapters) || 0,
+            type: manualType,
+            status: manualStatus,
+            genres: manualGenres,
         };
         
-        if (editingId) {
-            try { await updateWork(editingId, dados); await fetchMyNovels(); } catch (error) { alert('Erro ao atualizar.'); return; }
-        } else { await enviarParaLaravel(dados); }
-        resetForm();
+        setSavingWorkKey('manual');
+        try {
+            if (editingId) {
+                try { await updateWork(editingId, dados); await fetchMyNovels(); } catch (error) { alert('Erro ao atualizar.'); return; }
+            } else {
+                const ok = await enviarParaLaravel(dados);
+                if (!ok) return;
+            }
+            resetForm();
+        } finally {
+            setSavingWorkKey(null);
+        }
     };
 
     const confirmDelete = async () => {
@@ -305,7 +567,14 @@ function Home({ isAdmin }) {
         return (
             <TelaCapitulos 
                 work={viewingChaptersWork} 
-                onBack={() => setViewingChaptersWork(null)} 
+                onBack={() => {
+                    setViewingChaptersWork(null);
+                    fetchMyNovels();
+                }}
+                onWorkUpdated={(updatedWork) => {
+                    setViewingChaptersWork(updatedWork);
+                    setAllWorks((prev) => prev.map((w) => (w.id === updatedWork.id ? updatedWork : w)));
+                }}
             />
         );
     }
@@ -367,17 +636,17 @@ function Home({ isAdmin }) {
                         <select value={filterFormat} onChange={(e) => setFilterFormat(e.target.value)}>
                             <option value="todos">Qualquer Formato</option>
                             <option value="NOVEL">Novel</option>
-                            <option value="MANGA">Manga</option>
+                            <option value="MANGA">Mangá</option>
                         </select>
 
                         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                             <option value="todos">Qualquer Estado</option>
-                            <option value="RELEASING">A Lançar</option>
+                            <option value="RELEASING">Em Lançamento</option>
                             <option value="FINISHED">Concluído</option>
                         </select>
 
                         <button className={`chip ${libraryShowAdult ? 'active' : ''}`} onClick={() => setLibraryShowAdult(!libraryShowAdult)}>
-                            🔞 {libraryShowAdult ? 'A Mostrar +18' : 'Ocultar +18'}
+                            🔞 {libraryShowAdult ? 'Mostrando +18' : '+18 Oculto'}
                         </button>
 
                         {(filterText || sortBy !== 'padrao' || libraryShowAdult || filterFormat !== 'todos' || filterStatus !== 'todos' || selectedGenres.length > 0) && (
@@ -399,7 +668,7 @@ function Home({ isAdmin }) {
                                     );
                                 }}
                             >
-                                {g}
+                                {translateGenre(g)}
                             </button>
                         ))}
                     </div>
@@ -412,20 +681,62 @@ function Home({ isAdmin }) {
                             <Icons.Search /> Resultados da internet
                         </h2>
                         <div className="carousel">
-                            {searchResults.map((novel) => (
-                                <article key={novel.id} className="loredex-card carousel-item">
-                                    <div className="cover">
-                                        <img src={novel.coverImage.extraLarge} alt={`Capa de ${novel.title.romaji}`} />
-                                        <div className="badges">
-                                            <span className="badge type">{novel.format || 'Novel'}</span>
+                            {searchResults.map((novel) => {
+                                const alreadyAdded = isNovelInLibrary(novel);
+                                const isSavingThis = savingWorkKey === novel.id;
+
+                                return (
+                                    <article key={novel.id} className="loredex-card carousel-item">
+                                        <div className="cover">
+                                            <img src={novel.coverImage.extraLarge} alt={`Capa de ${novel.title.romaji}`} />
+                                            <div className="badges">
+                                                <span className="badge type">{translateFormat(novel.format || 'Manga')}</span>
+                                                {novel.status && <span className="badge status">{translateStatus(novel.status)}</span>}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="card-content">
-                                        <h4>{novel.title.romaji}</h4>
-                                        <button className="btn-save" onClick={() => handleSaveFromApi(novel)}>+ Adicionar</button>
-                                    </div>
-                                </article>
-                            ))}
+                                        <div className="card-content">
+                                            <h4>{novel.title.romaji}</h4>
+                                            {Array.isArray(novel.genres) && novel.genres.length > 0 && (
+                                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                                                    {novel.genres.slice(0, 3).map((g) => (
+                                                        <span
+                                                            key={g}
+                                                            style={{
+                                                                fontSize: '10px',
+                                                                padding: '2px 6px',
+                                                                borderRadius: '4px',
+                                                                background: 'rgba(99, 102, 241, 0.2)',
+                                                                color: '#a5b4fc',
+                                                                fontWeight: 600,
+                                                            }}
+                                                        >
+                                                            {translateGenre(g)}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <button
+                                                className="btn-save"
+                                                disabled={alreadyAdded || savingWorkKey !== null}
+                                                style={
+                                                    alreadyAdded
+                                                        ? { background: '#334155', color: '#94a3b8', cursor: 'not-allowed' }
+                                                        : isSavingThis
+                                                        ? { opacity: 0.7, cursor: 'wait' }
+                                                        : undefined
+                                                }
+                                                onClick={() => handleSaveFromApi(novel)}
+                                            >
+                                                {alreadyAdded
+                                                    ? '✓ Já na biblioteca'
+                                                    : isSavingThis
+                                                    ? 'Adicionando...'
+                                                    : '+ Adicionar'}
+                                            </button>
+                                        </div>
+                                    </article>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
@@ -446,7 +757,7 @@ function Home({ isAdmin }) {
 
                 {/* ---------------- MODAIS ---------------- */}
 
-                {/* 1. NOVO MODAL: PÁGINA DE DETALHES DA OBRA */}
+                {/* 1. MODAL: PÁGINA DE DETALHES DA OBRA */}
                 {workDetails && (
                     <div className="modal-bg" onClick={() => setWorkDetails(null)}>
                         <div className="modal details-modal" onClick={(e) => e.stopPropagation()}>
@@ -459,10 +770,34 @@ function Home({ isAdmin }) {
                             <div className="details-info">
                                 <h2>{workDetails.title}</h2>
                                 
-                                <div className="badges-row">
-                                    {workDetails.type && <span className="badge type">{workDetails.type}</span>}
-                                    {workDetails.status && <span className="badge status">{workDetails.status}</span>}
+                                <div className="badges-row" style={{ flexWrap: 'wrap' }}>
+                                    {workDetails.type && <span className="badge type">{translateFormat(workDetails.type)}</span>}
+                                    {workDetails.status && <span className="badge status">{translateStatus(workDetails.status)}</span>}
+                                    {Number(workDetails.total_chapters) > 0 && (
+                                        <span className="badge status">{workDetails.total_chapters} capítulos</span>
+                                    )}
                                 </div>
+
+                                {parseGenres(workDetails.genres).length > 0 && (
+                                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                                        {parseGenres(workDetails.genres).map((g) => (
+                                            <span
+                                                key={g}
+                                                style={{
+                                                    fontSize: '11px',
+                                                    padding: '4px 10px',
+                                                    borderRadius: '999px',
+                                                    background: 'rgba(99, 102, 241, 0.18)',
+                                                    border: '1px solid rgba(99, 102, 241, 0.4)',
+                                                    color: '#c7d2fe',
+                                                    fontWeight: 600,
+                                                }}
+                                            >
+                                                {translateGenre(g)}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
                                 
                                 <div className="details-synopsis">
                                     <h4 style={{ margin: '0 0 10px 0', color: '#a5b4fc', textTransform: 'uppercase', fontSize: '12px' }}>Sinopse</h4>
@@ -472,7 +807,7 @@ function Home({ isAdmin }) {
                                 </div>
 
                                 <div style={{ marginTop: 'auto', paddingTop: '24px' }}>
-                                        <button
+                                    <button
                                         className="btn-primary"
                                         style={{ width: '100%', fontSize: '16px' }}
                                         onClick={() => {
@@ -481,7 +816,7 @@ function Home({ isAdmin }) {
                                         }}
                                     >
                                         Avaliar Obra
-                                        </button>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -491,14 +826,66 @@ function Home({ isAdmin }) {
                 {/* 2. MODAL: CADASTRO / EDIÇÃO */}
                 {showForm && (
                     <div className="modal-bg" onClick={resetForm}>
-                        <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal" style={{ maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
                             <button className="modal-close" onClick={resetForm}>✕</button>
                             <h2 style={{ marginTop: 0 }}>{editingId ? 'Editar obra' : 'Cadastro Manual'}</h2>
                             <form onSubmit={handleSubmitForm}>
                                 <div>
-                                    <label style={{ color: '#94a3b8' }}>Título da Novel</label>
+                                    <label style={{ color: '#94a3b8' }}>Título da Obra</label>
                                     <input type="text" required className="form-input" value={manualTitle} onChange={(e) => setManualTitle(e.target.value)} />
                                 </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                                    <div>
+                                        <label style={{ color: '#94a3b8', fontSize: '13px' }}>Formato</label>
+                                        <select className="form-input" value={manualType} onChange={(e) => setManualType(e.target.value)}>
+                                            <option value="manga">Mangá</option>
+                                            <option value="novel">Novel</option>
+                                            <option value="webnovel">Webnovel</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={{ color: '#94a3b8', fontSize: '13px' }}>Estado</label>
+                                        <select className="form-input" value={manualStatus} onChange={(e) => setManualStatus(e.target.value)}>
+                                            <option value="ongoing">Em Lançamento</option>
+                                            <option value="completed">Concluído</option>
+                                            <option value="dropped">Cancelado</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={{ color: '#94a3b8', fontSize: '13px' }}>Total de Capítulos</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            className="form-input"
+                                            value={manualChapters}
+                                            onChange={(e) => setManualChapters(e.target.value)}
+                                            placeholder="Ex: 200"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div style={{ marginBottom: '16px' }}>
+                                    <label style={{ color: '#94a3b8', display: 'block', marginBottom: '8px' }}>Gêneros</label>
+                                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                        {availableGenres.map((g) => (
+                                            <button
+                                                type="button"
+                                                key={g}
+                                                className={`chip ${manualGenres.includes(g) ? 'active' : ''}`}
+                                                style={{ padding: '5px 10px', fontSize: '12px' }}
+                                                onClick={() => {
+                                                    setManualGenres((prev) =>
+                                                        prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]
+                                                    );
+                                                }}
+                                            >
+                                                {translateGenre(g)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 <div>
                                     <label style={{ color: '#94a3b8' }}>URL da Capa (Opcional)</label>
                                     <input type="text" className="form-input" value={manualCover} onChange={(e) => setManualCover(e.target.value)} placeholder="https://link.com/foto.jpg" />
