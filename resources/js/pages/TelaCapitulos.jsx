@@ -9,7 +9,7 @@ import {
     updateWorkChaptersCount,
     syncWorkMetadata,
 } from '../services/api';
-import { translateFormat, translateStatus } from '../components/app';
+import { translateFormat, translateStatus } from '../components/App';
 
 const Icons = {
     ArrowLeft: () => (
