@@ -18,6 +18,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/works', [WorkController::class, 'index']);
     Route::get('/works/{work}', [WorkController::class, 'show']);
+    Route::post('/works', [WorkController::class, 'store']);
     Route::post('/works/sync-all', [WorkController::class, 'syncMetadata']);
     Route::post('/works/{work}/sync', [WorkController::class, 'syncMetadata']);
     Route::patch('/works/{work}/chapters-count', [WorkController::class, 'update']);
@@ -33,7 +34,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Só administrador
     Route::middleware('admin')->group(function () {
-        Route::post('/works', [WorkController::class, 'store']);
         Route::match(['put', 'patch'], '/works/{work}', [WorkController::class, 'update']);
         Route::delete('/works/{work}', [WorkController::class, 'destroy']);
 
