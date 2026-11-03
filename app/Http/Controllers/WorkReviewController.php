@@ -10,6 +10,7 @@ class WorkReviewController extends Controller
     // 1. Listar todos os comentários gerais de uma obra
     public function index($workId)
     {
+        // Garante a inclusão explícita de user_id da review para o frontend comparar
         $reviews = WorkReview::with('user:id,name') 
             ->where('work_id', $workId)
             ->orderBy('created_at', 'desc')
@@ -36,13 +37,12 @@ class WorkReviewController extends Controller
             'criteria' => $validated['criteria'] ?? null,
         ]);
 
-        // Carrega os dados do usuário para devolver pronto para a tela
         $review->load('user:id,name');
 
         return response()->json($review, 201);
     }
 
-     // Editar comentário (autor ou administrador)
+    // 2. Editar comentário: APENAS o autor original pode alterar seu próprio texto
     public function update(Request $request, $workId, $reviewId)
     {
         $validated = $request->validate([
@@ -54,12 +54,10 @@ class WorkReviewController extends Controller
 
         $user = $request->user();
 
-        if (
-            (int) $review->user_id !== (int) $user->id
-            && $user->role !== 'admin'
-        ) {
+        // Bloqueia qualquer pessoa que não seja o autor (inclusive administradores)
+        if ((int) $review->user_id !== (int) $user->id) {
             return response()->json([
-                'message' => 'Sem permissão para editar este comentário.',
+                'message' => 'Apenas o autor pode editar as palavras do comentário.',
             ], 403);
         }
 
@@ -72,14 +70,20 @@ class WorkReviewController extends Controller
         return response()->json($review);
     }
 
-    // 3. Excluir um comentário (Apenas o autor do comentário ou Admin)
+    // 3. Excluir comentário: Autor original OU Administrador
     public function destroy(Request $request, $workId, $reviewId)
     {
         $review = WorkReview::where('work_id', $workId)->findOrFail($reviewId);
 
         $user = $request->user();
-        if ($review->user_id !== $user->id && $user->role !== 'admin') {
-            return response()->json(['message' => 'Sem permissão para excluir este comentário.'], 403);
+
+        $isOwner = (int) $review->user_id === (int) $user->id;
+        $isAdmin = ($user->role === 'admin' || (bool) ($user->is_admin ?? false));
+
+        if (!$isOwner && !$isAdmin) {
+            return response()->json([
+                'message' => 'Sem permissão para excluir este comentário.',
+            ], 403);
         }
 
         $review->delete();

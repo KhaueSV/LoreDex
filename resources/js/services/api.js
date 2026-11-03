@@ -14,6 +14,25 @@ export const clearToken = () => {
     localStorage.removeItem('token');
 };
 
+// ---------------- USUÁRIO ----------------
+
+export const getSavedUser = () => {
+    try {
+        const user = localStorage.getItem('loredex_user');
+        return user ? JSON.parse(user) : null;
+    } catch {
+        return null;
+    }
+};
+
+export const saveUser = (user) => {
+    localStorage.setItem('loredex_user', JSON.stringify(user));
+};
+
+export const clearUser = () => {
+    localStorage.removeItem('loredex_user');
+};
+
 // ---------------- E-MAIL ----------------
 
 export const getSavedEmail = () => {
@@ -60,6 +79,9 @@ export const login = async (email, password) => {
     // Salva o token
     setToken(data.token);
 
+    // Salva Ususario
+    saveUser(data.user);
+
     // Salva somente o e-mail
     saveEmail(email);
 
@@ -102,6 +124,9 @@ export const register = async (name, email, password) => {
     // Salva o token
     setToken(data.token);
 
+    // Salva Ususario
+    saveUser(data.user);
+
     // Salva somente o e-mail
     saveEmail(email);
 
@@ -115,9 +140,8 @@ export const logout = async () => {
             headers: headers(),
         });
     } finally {
-        // Remove somente o token.
-        // O e-mail continua salvo para facilitar o próximo login.
         clearToken();
+        clearUser();
     }
 };
 
@@ -285,9 +309,19 @@ export const deleteWorkReview = async (workId, reviewId) => {
 // ---------------- USUÁRIO LOGADO E ADMIN ----------------
 
 export const getMe = async () => {
-    const res = await fetch(`${API_URL}/me`, { headers: headers() });
-    if (!res.ok) throw new Error('Não autenticado');
-    return res.json();
+    const res = await fetch(`${API_URL}/me`, {
+        headers: headers(),
+    });
+
+    if (!res.ok) {
+        throw new Error('Não autenticado');
+    }
+
+    const user = await res.json();
+
+    saveUser(user);
+
+    return user;
 };
 
 export const getAdminStats = async () => {
