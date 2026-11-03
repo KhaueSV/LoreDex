@@ -5,8 +5,10 @@ import '../../css/home.css';
 import { getWorks, createWork, updateWork, deleteWork, getToken, logout, getMe, syncWorkMetadata } from '../services/api';
 import TelaCapitulos from '../pages/TelaCapitulos';
 import UserMenu from './UserMenu';
+import WorkRecommendation from '../components/WorkRecommendation';
 
 const PLACEHOLDER = 'https://via.placeholder.com/220x320/0f172a/6366f1?text=Sem+Capa';
+
 
 // ---------------- DICIONÁRIOS DE TRADUÇÃO (PT-BR) ----------------
 export const GENRE_TRANSLATIONS = {
@@ -328,32 +330,45 @@ function Home({ isAdmin }) {
     };
 
     // ---------------- TRADUÇÃO E FALLBACK DE CAPÍTULOS ----------------
+    // fetch com tempo limite: uma API externa lenta não pode travar o "Adicionar à biblioteca"
+    const fetchWithTimeout = async (url, options = {}, ms = 4000) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), ms);
+        try {
+            return await fetch(url, { ...options, signal: controller.signal });
+        } finally {
+            clearTimeout(timer);
+        }
+    };
+
+    // Retorna { text, translated } — "translated" diz se a tradução deu certo aqui no navegador
     const translateSynopsisToPt = async (text) => {
-        if (!text || !text.trim()) return 'Sem sinopse disponível.';
+        const empty = { text: 'Sem sinopse disponível.', translated: true };
+        if (!text || !text.trim()) return empty;
         const clean = text.replace(/<[^>]+>/g, '').replace(/\(Source:[^)]+\)/gi, '').trim();
-        if (!clean) return 'Sem sinopse disponível.';
+        if (!clean) return empty;
 
         try {
             const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=pt&dt=t&q=${encodeURIComponent(clean)}`;
-            const res = await fetch(url);
+            const res = await fetchWithTimeout(url);
             if (res.ok) {
                 const data = await res.json();
                 if (Array.isArray(data) && Array.isArray(data[0])) {
                     const translated = data[0].map((part) => part[0] || '').join('');
-                    if (translated.trim()) return translated.trim();
+                    if (translated.trim()) return { text: translated.trim(), translated: true };
                 }
             }
         } catch (err) {
             console.warn('Falha ao traduzir no cliente, o servidor tentará traduzir:', err);
         }
-        return clean;
+        return { text: clean, translated: false };
     };
 
     const fetchChaptersFromJikanOrMangaDex = async (title) => {
         if (!title) return 0;
         // 1. Jikan (MyAnimeList)
         try {
-            const res = await fetch(`https://api.jikan.moe/v4/manga?q=${encodeURIComponent(title)}&limit=3`);
+            const res = await fetchWithTimeout(`https://api.jikan.moe/v4/manga?q=${encodeURIComponent(title)}&limit=3`);
             if (res.ok) {
                 const json = await res.json();
                 const items = json?.data || [];
@@ -369,7 +384,7 @@ function Home({ isAdmin }) {
 
         // 2. MangaDex
         try {
-            const res = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(title)}&limit=1&order[relevance]=desc`);
+            const res = await fetchWithTimeout(`https://api.mangadex.org/manga?title=${encodeURIComponent(title)}&limit=1&order[relevance]=desc`);
             if (res.ok) {
                 const json = await res.json();
                 const manga = json?.data?.[0];
@@ -377,7 +392,7 @@ function Home({ isAdmin }) {
                     const lastChap = Number(manga?.attributes?.lastChapter);
                     if (lastChap > 0) return lastChap;
 
-                    const aggRes = await fetch(`https://api.mangadex.org/manga/${manga.id}/aggregate`);
+                    const aggRes = await fetchWithTimeout(`https://api.mangadex.org/manga/${manga.id}/aggregate`);
                     if (aggRes.ok) {
                         const aggJson = await aggRes.json();
                         const volumes = aggJson?.volumes || {};
@@ -452,8 +467,14 @@ function Home({ isAdmin }) {
     // ---------------- AÇÕES (SALVAR / EDITAR / EXCLUIR) ----------------
     const enviarParaLaravel = async (dados) => {
         try {
-            await createWork(dados);
-            await fetchMyNovels();
+            const created = await createWork(dados);
+            // Insere a obra nova direto na lista, sem recarregar a biblioteca inteira
+            // (recarregar também disparava a sincronização de TODAS as obras em segundo plano)
+            if (created && created.id) {
+                setAllWorks((prev) => [created, ...prev.filter((w) => w.id !== created.id)]);
+            } else {
+                await fetchMyNovels();
+            }
             clearSearch();
             return true;
         } catch (error) {
@@ -472,22 +493,28 @@ function Home({ isAdmin }) {
         setSavingWorkKey(novel.id);
         try {
             const rawDesc = novel.description ? novel.description.replace(/<[^>]+>/g, '') : '';
-            const translatedDesc = await translateSynopsisToPt(rawDesc);
+            const knownChapters = Number(novel.chapters) || 0;
 
-            let totalChapters = Number(novel.chapters) || 0;
-            if (totalChapters <= 0) {
-                totalChapters = await fetchChaptersFromJikanOrMangaDex(novel.title?.english || novel.title?.romaji);
-            }
+            // Tradução e busca de capítulos rodam AO MESMO TEMPO (antes era uma depois da outra)
+            const [synopsis, totalChapters] = await Promise.all([
+                translateSynopsisToPt(rawDesc),
+                knownChapters > 0
+                    ? Promise.resolve(knownChapters)
+                    : fetchChaptersFromJikanOrMangaDex(novel.title?.english || novel.title?.romaji),
+            ]);
 
             await enviarParaLaravel({
                 title: novel.title.romaji,
                 cover_image: novel.coverImage.extraLarge,
-                description: translatedDesc,
+                description: synopsis.text,
                 type: novel.format || 'MANGA',
                 status: novel.status || 'RELEASING',
                 is_adult: novel.isAdult || false,
                 genres: novel.genres || [],
-                total_chapters: totalChapters
+                total_chapters: totalChapters,
+                // Avisa o servidor que o trabalho pesado já foi feito aqui, para ele não repetir
+                already_translated: synopsis.translated,
+                chapters_checked: true,
             });
         } finally {
             setSavingWorkKey(null);
@@ -560,7 +587,16 @@ function Home({ isAdmin }) {
     };
 
     const confirmDelete = async () => {
-        try { await deleteWork(workToDelete.id); setWorkToDelete(null); await fetchMyNovels(); } catch (error) { alert('Erro ao excluir.'); }
+        if (!workToDelete) return;
+        const targetId = workToDelete.id;
+        try {
+            await deleteWork(targetId);
+            setWorkToDelete(null);
+            // Remove instantaneamente da lista da biblioteca local
+            setAllWorks((prev) => prev.filter((w) => w.id !== targetId));
+        } catch (error) {
+            alert(error.message || 'Erro ao remover da sua biblioteca.');
+        }
     };
 
     if (viewingChaptersWork) {
@@ -653,7 +689,7 @@ function Home({ isAdmin }) {
                             <button className="link-btn" onClick={clearFilters}>Limpar filtros</button>
                         )}
                     </div>
-
+                    
                     {/* SELEÇÃO MÚLTIPLA DE GÊNEROS */}
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', width: '100%', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
                         <span style={{ color: '#64748b', fontSize: '13px', display: 'flex', alignItems: 'center', marginRight: '4px' }}>Gêneros:</span>
@@ -672,6 +708,17 @@ function Home({ isAdmin }) {
                             </button>
                         ))}
                     </div>
+
+                    {/* RECOMENDAÇÃO ALEATÓRIA (catálogo inteiro do AniList) */}
+                    <WorkRecommendation
+                        selectedGenres={selectedGenres}
+                        isInLibrary={isNovelInLibrary}
+                        onAdd={handleSaveFromApi}
+                        savingWorkKey={savingWorkKey}
+                        translateGenre={translateGenre}
+                        translateFormat={translateFormat}
+                        translateStatus={translateStatus}
+                    />
                 </div>
 
                 {/* RESULTADOS DA API (AniList) */}
@@ -910,13 +957,13 @@ function Home({ isAdmin }) {
                 {workToDelete && (
                     <div className="modal-bg" onClick={() => setWorkToDelete(null)}>
                         <div className="modal" style={{ maxWidth: '420px' }} onClick={(e) => e.stopPropagation()}>
-                            <h2 style={{ marginTop: 0 }}>Excluir obra?</h2>
+                            <h2 style={{ marginTop: 0 }}>Remover da biblioteca?</h2>
                             <p style={{ color: '#94a3b8', lineHeight: 1.5 }}>
-                                "{workToDelete.title}" será removida da sua biblioteca. Essa ação não pode ser desfeita.
+                                "{workToDelete.title}" será removida apenas da sua biblioteca pessoal. Você poderá adicioná-la novamente quando quiser.
                             </p>
                             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
                                 <button className="btn-secondary" onClick={() => setWorkToDelete(null)}>Cancelar</button>
-                                <button className="btn-danger" onClick={confirmDelete}>Excluir</button>
+                                <button className="btn-danger" onClick={confirmDelete}>Remover</button>
                             </div>
                         </div>
                     </div>

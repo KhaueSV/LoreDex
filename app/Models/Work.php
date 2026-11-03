@@ -26,8 +26,15 @@ class Work extends Model
     protected $casts = [
         'genres' => 'array',
         'is_adult' => 'boolean',
+        'is_blocked' => 'boolean',
         'total_chapters' => 'integer',
     ];
+
+    // Usuários que têm esta obra na biblioteca pessoal
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'user_works')->withTimestamps();
+    }
 
     // Relacionamento: Uma obra (Work) possui MUITOS capítulos (Chapters)
     public function chapters()

@@ -32,4 +32,15 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    // Biblioteca pessoal: obras que este usuário adicionou
+    public function works()
+    {
+        return $this->belongsToMany(Work::class, 'user_works')->withTimestamps();
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
 }

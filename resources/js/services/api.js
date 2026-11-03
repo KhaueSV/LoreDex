@@ -163,6 +163,27 @@ export const getWorks = async () => {
     return response.json();
 };
 
+// RECOMENDAR uma obra
+export const recommendWork = async (genres, excludeAdult = true, excludeId = null) => {
+    const response = await fetch(`${API_URL}/works/recommend`, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({
+            genres,
+            exclude_adult: excludeAdult,
+            ...(excludeId ? { exclude_id: excludeId } : {}),
+        }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || 'Erro ao recomendar uma obra.');
+    }
+
+    return data;
+};
+
 // INSERIR novos dados (POST)
 export const createWork = async (workData) => {
     const response = await fetch(`${API_URL}/works`, {
@@ -345,4 +366,29 @@ export const setUserRole = async (id, role) => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Erro ao alterar papel');
     return data;
+};
+
+export const getAdminWorks = async () => {
+    const res = await fetch(`${API_URL}/admin/works`, { headers: headers() });
+    if (!res.ok) throw new Error('Erro ao carregar obras do catálogo');
+    return res.json();
+};
+
+export const toggleBlockWorkAdmin = async (id) => {
+    const res = await fetch(`${API_URL}/admin/works/${id}/toggle-block`, {
+        method: 'PATCH',
+        headers: headers(),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Erro ao alterar bloqueio da obra');
+    return data;
+};
+
+export const deleteWorkAdmin = async (id) => {
+    const res = await fetch(`${API_URL}/admin/works/${id}`, {
+        method: 'DELETE',
+        headers: headers(),
+    });
+    if (!res.ok) throw new Error('Erro ao excluir obra do catálogo');
+    return res.json().catch(() => ({}));
 };

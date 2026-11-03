@@ -28,6 +28,41 @@ body {
 .clear-search:hover { color: white; background: rgba(255,255,255,0.1); }
 .form-input { width: 100%; padding: 12px; margin-top: 8px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white; }
 
+/* Recomendação aleatória (dentro do "Filtrar Minha Biblioteca") */
+.reco-panel { width: 100%; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.05); }
+.reco-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 12px 16px; border-radius: 14px; background: linear-gradient(90deg, rgba(99, 102, 241, 0.14), rgba(99, 102, 241, 0.04)); border: 1px solid rgba(99, 102, 241, 0.3); }
+.reco-intro { display: flex; align-items: center; gap: 12px; min-width: 220px; }
+.reco-intro > div { display: flex; flex-direction: column; gap: 2px; }
+.reco-intro strong { color: #e0e7ff; font-size: 14px; }
+.reco-intro span { color: #94a3b8; font-size: 12px; }
+.reco-icon { font-size: 26px; line-height: 1; }
+.reco-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.reco-btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border: none; border-radius: 999px; background: #6366f1; color: white; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.2s; white-space: nowrap; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); }
+.reco-btn:hover:not(:disabled) { background: #4f46e5; transform: translateY(-1px); }
+.reco-btn:disabled { opacity: 0.7; cursor: wait; }
+.reco-error { margin: 10px 0 0; color: #fca5a5; font-size: 13px; }
+
+.reco-result { position: relative; display: flex; gap: 18px; margin-top: 12px; padding: 16px; border-radius: 14px; background: #1e293b; border: 1px solid rgba(99, 102, 241, 0.35); box-shadow: 0 10px 28px rgba(0,0,0,0.35); animation: recoIn 0.25s ease; }
+@keyframes recoIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.reco-close { position: absolute; top: 8px; right: 8px; background: none; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; padding: 4px 8px; border-radius: 50%; }
+.reco-close:hover { color: white; background: rgba(255,255,255,0.08); }
+.reco-cover { width: 130px; height: 190px; object-fit: cover; border-radius: 10px; flex-shrink: 0; background: #0f172a; }
+.reco-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1; padding-right: 24px; }
+.reco-info h4 { margin: 0; font-size: 18px; color: #f8fafc; line-height: 1.25; }
+.reco-subtitle { color: #94a3b8; font-size: 12px; margin-top: -4px; }
+.reco-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+.reco-genres { display: flex; gap: 4px; flex-wrap: wrap; }
+.reco-genres span { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: rgba(99, 102, 241, 0.2); color: #a5b4fc; font-weight: 600; }
+.reco-synopsis { margin: 0; color: #94a3b8; font-size: 13px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.reco-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: auto; }
+.reco-actions .btn-save { width: auto; margin-top: 0; padding: 10px 18px; }
+.reco-actions .btn-save:disabled { background: #334155; color: #94a3b8; cursor: default; }
+.reco-link { padding: 10px 18px; text-decoration: none; font-size: 14px; display: inline-flex; align-items: center; }
+@media (max-width: 560px) {
+    .reco-result { flex-direction: column; align-items: center; text-align: center; }
+    .reco-info { padding-right: 0; align-items: center; }
+    .reco-meta, .reco-genres, .reco-actions { justify-content: center; }
+}
 /* Filtro da Biblioteca */
 .filter-bar { display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 36px; padding: 18px 20px; background: rgba(15, 23, 42, 0.4); border: 1px dashed rgba(165, 180, 252, 0.3); border-radius: 16px; backdrop-filter: blur(6px); }
 .filter-label { width: 100%; color: #a5b4fc; font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }

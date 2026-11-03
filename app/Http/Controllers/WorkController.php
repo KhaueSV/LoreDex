@@ -8,10 +8,16 @@ use Illuminate\Support\Facades\Http;
 
 class WorkController extends Controller
 {
-    // GET: listar
-    public function index()
+    // GET: listar a biblioteca PESSOAL do usuário logado (sem obras bloqueadas pelo admin)
+    public function index(Request $request)
     {
-        return response()->json(Work::latest()->get());
+        $works = $request->user()
+            ->works()
+            ->where('works.is_blocked', false)
+            ->orderByPivot('created_at', 'desc')
+            ->get();
+
+        return response()->json($works);
     }
 
     // GET: exibir detalhes de uma obra
@@ -20,9 +26,11 @@ class WorkController extends Controller
         return response()->json(Work::findOrFail($id));
     }
 
-    // POST: salvar
+    // POST: adicionar uma obra à biblioteca do usuário.
+    // Se a obra já existe no catálogo, apenas vincula; senão cria no catálogo e vincula.
     public function store(Request $request)
     {
+        $user = $request->user();
         $titleTrimmed = trim((string) $request->title);
 
         if ($titleTrimmed === '') {
@@ -31,10 +39,23 @@ class WorkController extends Controller
 
         $existing = Work::whereRaw('LOWER(TRIM(title)) = ?', [mb_strtolower($titleTrimmed, 'UTF-8')])->first();
         if ($existing) {
-            return response()->json([
-                'message' => 'Esta obra já está na sua biblioteca.',
-                'work'    => $existing,
-            ], 409);
+            if ($existing->is_blocked) {
+                return response()->json([
+                    'message' => 'Esta obra está temporariamente indisponível na plataforma.',
+                ], 403);
+            }
+
+            if ($user->works()->whereKey($existing->id)->exists()) {
+                return response()->json([
+                    'message' => 'Esta obra já está na sua biblioteca.',
+                    'work'    => $existing,
+                ], 409);
+            }
+
+            // Já está no catálogo (outro usuário adicionou): só vincula, sem chamar APIs externas
+            $user->works()->attach($existing->id);
+
+            return response()->json($existing, 201);
         }
 
         $work = new Work();
@@ -42,7 +63,10 @@ class WorkController extends Controller
         $work->cover_url = $request->cover_image ?? $request->cover_url;
 
         $rawDesc = $request->description ?? $request->synopsis ?? '';
-        $work->synopsis = $this->translateTextIfNeeded($rawDesc);
+        // Se o navegador já traduziu a sinopse, não chama o Google Tradutor de novo
+        $work->synopsis = $request->boolean('already_translated')
+            ? (trim((string) $rawDesc) !== '' ? $rawDesc : 'Sem sinopse disponível.')
+            : $this->translateTextIfNeeded($rawDesc);
 
         $work->source_url = $request->source_url;
         $work->type = $this->normalizeType($request->type);
@@ -51,12 +75,14 @@ class WorkController extends Controller
         $work->genres = $this->normalizeGenres($request->genres);
 
         $chapters = (int) ($request->total_chapters ?? 0);
-        if ($chapters <= 0 && !empty($work->title)) {
+        // Só busca capítulos em APIs externas se o navegador ainda não tentou (ex.: cadastro manual)
+        if ($chapters <= 0 && !empty($work->title) && !$request->boolean('chapters_checked')) {
             $chapters = $this->fetchChaptersFallback($work->title, $work->source_url);
         }
         $work->total_chapters = $chapters;
 
         $work->save();
+        $user->works()->attach($work->id);
 
         return response()->json($work, 201);
     }
@@ -102,12 +128,62 @@ class WorkController extends Controller
         return response()->json($work);
     }
 
-    // DELETE: excluir
-    public function destroy($id)
+    // DELETE: remover da biblioteca pessoal do usuário
+    public function destroy(Request $request, $id)
     {
-        Work::findOrFail($id)->delete();
+        $user = $request->user();
+        $work = Work::findOrFail($id);
 
-        return response()->json(null, 204);
+        // Desvincula a obra da biblioteca do usuário logado
+        $user->works()->detach($work->id);
+
+        return response()->json(['message' => 'Obra removida da sua biblioteca com sucesso.'], 200);
+    }
+
+    // ==========================================
+    // MÉTODO DE RECOMENDAÇÃO CORRIGIDO
+    // ==========================================
+    public function recommend(Request $request)
+    {
+        $validated = $request->validate([
+            'genres' => 'required|array|min:1',
+            'genres.*' => 'required|string',
+            'exclude_adult' => 'sometimes|boolean',
+            'exclude_id' => 'sometimes|integer|nullable',
+        ]);
+
+        $genres = $validated['genres'];
+
+        $work = Work::query()
+            // Remove obras +18 se a opção estiver marcada
+            ->when(
+                $request->boolean('exclude_adult', true),
+                fn ($query) => $query->where('is_adult', false)
+            )
+            // Remove a obra anterior da nova busca (Tentar outra)
+            ->when(
+                $request->filled('exclude_id'),
+                fn ($query) => $query->where('id', '!=', $request->exclude_id)
+            )
+            // Filtra as obras verificando se a coluna JSON 'genres' contém ALGUM dos gêneros selecionados
+            ->where(function ($query) use ($genres) {
+                foreach ($genres as $genre) {
+                    $query->orWhereJsonContains('genres', $genre);
+                }
+            })
+            ->inRandomOrder()
+            ->first();
+
+        if (!$work) {
+            return response()->json([
+                'message' => 'Nenhuma obra encontrada para os gêneros selecionados.'
+            ], 404);
+        }
+
+        return response()->json([
+            'message' => 'Obra recomendada com sucesso!',
+            'work' => $work
+        ]);
     }
 
     /**

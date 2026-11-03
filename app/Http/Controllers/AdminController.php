@@ -40,4 +40,29 @@ class AdminController extends Controller
 
         return response()->json($user);
     }
+
+    public function works()
+    {
+        return response()->json(
+            Work::withCount('users')->latest()->get()
+        );
+    }
+
+    public function toggleBlockWork(Work $work)
+    {
+        $work->is_blocked = !$work->is_blocked;
+        $work->save();
+
+        return response()->json([
+            'message' => $work->is_blocked ? 'Obra bloqueada com sucesso.' : 'Obra desbloqueada com sucesso.',
+            'work' => $work
+        ]);
+    }
+
+    public function destroyWork(Work $work)
+    {
+        $work->delete();
+
+        return response()->json(['message' => 'Obra excluída permanentemente do catálogo.'], 200);
+    }
 }
