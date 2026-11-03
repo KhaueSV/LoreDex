@@ -161,14 +161,6 @@ LoreDex/
 
 ---
 
-## 👥 Contribuidores
-
-- **Luiz Benevides** (Desenvolvimento Geral & Adaptações de Engenharia)
-- **Gian** (Concepção e Desenvolvimento do Módulo de Recomendação de Obras)
-- **Equipe LoreDex**
-
----
-
 ## 📄 Licença
 
 Este projeto é desenvolvido para fins educacionais e de entretenimento sob a licença [MIT](LICENSE).
