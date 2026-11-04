@@ -84,7 +84,7 @@ const Icons = {
 };
 
 // ---------------- SUBCOMPONENTE: CARROSSEL ----------------
-const CarouselSection = ({ title, icon, works, loading, onEdit, onDelete, onClickWork }) => {
+const CarouselSection = ({ title, icon, works, loading, onEdit, onDelete, onClickWork, isAdmin }) => {
     const carouselRef = useRef(null);
 
     if (!loading && works.length === 0) return null;
@@ -127,7 +127,7 @@ const CarouselSection = ({ title, icon, works, loading, onEdit, onDelete, onClic
                                         </div>
 
                                         <div className="card-actions" onClick={(e) => e.stopPropagation()}>
-                                            <button className="action-btn edit" onClick={() => onEdit(work)}>✎ Editar</button>
+                                            {isAdmin && <button className="action-btn edit" onClick={() => onEdit(work)}>✎ Editar</button>}
                                             <button className="action-btn delete" onClick={() => onDelete(work)}>🗑 Excluir</button>
                                         </div>
                                     </div>
@@ -537,6 +537,7 @@ function Home({ isAdmin }) {
     const openCreate = () => { resetForm(); setShowForm(true); };
     
     const openEdit = (work) => {
+        if (!isAdmin) return;
         setEditingId(work.id);
         setManualTitle(work.title || '');
         setManualCover(work.cover_url || '');
@@ -793,6 +794,7 @@ function Home({ isAdmin }) {
                     <CarouselSection
                         key={s.title} title={s.title} icon={s.icon} works={s.works} loading={loadingMyWorks}
                         onEdit={openEdit} onDelete={setWorkToDelete} onClickWork={setWorkDetails}
+                        isAdmin={isAdmin}
                     />
                 ))}
 

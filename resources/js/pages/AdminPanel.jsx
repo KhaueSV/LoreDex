@@ -10,6 +10,20 @@ export default function AdminPanel({ currentUserId }) {
     const [loading, setLoading] = useState(true);
     const [changingId, setChangingId] = useState(null);
     const [changingWorkId, setChangingWorkId] = useState(null);
+    const [showAdult, setShowAdult] = useState(false);
+
+    const isWorkAdult = (w) => {
+        if (w.is_adult === true || w.is_adult === 1 || w.is_adult === '1') return true;
+        let genres = [];
+        try {
+            genres = Array.isArray(w.genres) ? w.genres : (typeof w.genres === 'string' ? JSON.parse(w.genres || '[]') : []);
+        } catch {
+            genres = [];
+        }
+        const normalized = genres.map((g) => String(g).toUpperCase());
+        if (normalized.some((g) => ['HENTAI', 'ECCHI', 'ADULT', 'ADULTO', 'SMUT', 'EROTICA', '+18'].includes(g))) return true;
+        return /\b(hentai|ecchi|\+18|nsfw|erótico|erotico)\b/i.test(w.title || '') || /\b(hentai|ecchi|\+18|nsfw|erótico|erotico)\b/i.test(w.synopsis || '');
+    };
 
     const load = async () => {
         try {
@@ -116,15 +130,37 @@ export default function AdminPanel({ currentUserId }) {
                         <h2>Catálogo Geral de Obras</h2>
                         <p>Bloqueie obras temporariamente com problemas ou remova-as permanentemente da plataforma.</p>
                     </div>
-                    <span className="admin-badge">
-                        {works.length} {works.length === 1 ? 'obra' : 'obras'}
-                    </span>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <button
+                            type="button"
+                            className="role-btn"
+                            style={{
+                                padding: '6px 14px',
+                                fontSize: '12px',
+                                borderRadius: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                cursor: 'pointer',
+                                background: showAdult ? 'rgba(239, 68, 68, 0.2)' : 'rgba(99, 102, 241, 0.15)',
+                                border: showAdult ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(99, 102, 241, 0.4)',
+                                color: showAdult ? '#fca5a5' : '#c7d2fe',
+                                fontWeight: 600,
+                            }}
+                            onClick={() => setShowAdult(!showAdult)}
+                        >
+                            {showAdult ? '🔞 Obras +18: Visíveis' : '🛡️ Obras +18: Ocultas'}
+                        </button>
+                        <span className="admin-badge">
+                            {works.filter((w) => showAdult || !isWorkAdult(w)).length} {works.filter((w) => showAdult || !isWorkAdult(w)).length === 1 ? 'obra' : 'obras'}
+                        </span>
+                    </div>
                 </div>
 
                 {loading ? (
                     <div className="admin-state">Carregando catálogo...</div>
-                ) : works.length === 0 ? (
-                    <div className="admin-state">Nenhuma obra cadastrada no catálogo.</div>
+                ) : works.filter((w) => showAdult || !isWorkAdult(w)).length === 0 ? (
+                    <div className="admin-state">Nenhuma obra cadastrada para exibir.</div>
                 ) : (
                     <div className="admin-table-wrap">
                         <table className="admin-table">
@@ -139,19 +175,35 @@ export default function AdminPanel({ currentUserId }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {works.map((w) => {
+                                {works.filter((w) => showAdult || !isWorkAdult(w)).map((w) => {
                                     const isBusy = changingWorkId === w.id;
+                                    const isAdult = isWorkAdult(w);
                                     return (
                                         <tr key={w.id} style={{ opacity: w.is_blocked ? 0.65 : 1 }}>
                                             <td style={{ width: '60px' }}>
                                                 <img
                                                     src={w.cover_url || 'https://via.placeholder.com/40x55'}
                                                     alt={w.title}
-                                                    style={{ width: '40px', height: '55px', objectFit: 'cover', borderRadius: '6px' }}
+                                                    style={{
+                                                        width: '40px',
+                                                        height: '55px',
+                                                        objectFit: 'cover',
+                                                        borderRadius: '6px',
+                                                        filter: isAdult ? 'blur(10px)' : 'none',
+                                                        transition: 'filter 0.2s ease',
+                                                    }}
+                                                    onMouseEnter={(e) => { e.currentTarget.style.filter = 'none'; }}
+                                                    onMouseLeave={(e) => { if (isAdult) e.currentTarget.style.filter = 'blur(10px)'; }}
+                                                    title={isAdult ? 'Obra +18 (Passe o mouse para revelar capa)' : w.title}
                                                 />
                                             </td>
                                             <td className="admin-name">
                                                 {w.title}
+                                                {isAdult && (
+                                                    <span style={{ marginLeft: '6px', fontSize: '10px', color: '#f43f5e', background: 'rgba(244,63,94,0.15)', padding: '2px 5px', borderRadius: '4px', fontWeight: 'bold' }}>
+                                                        +18
+                                                    </span>
+                                                )}
                                                 {w.is_blocked && (
                                                     <span style={{ marginLeft: '8px', fontSize: '11px', color: '#f87171', background: 'rgba(239,68,68,0.15)', padding: '2px 6px', borderRadius: '4px' }}>
                                                         Bloqueada
