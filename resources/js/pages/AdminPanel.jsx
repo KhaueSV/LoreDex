@@ -138,9 +138,6 @@ export default function AdminPanel({ currentUserId }) {
                                 padding: '6px 14px',
                                 fontSize: '12px',
                                 borderRadius: '8px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
                                 cursor: 'pointer',
                                 background: showAdult ? 'rgba(239, 68, 68, 0.2)' : 'rgba(99, 102, 241, 0.15)',
                                 border: showAdult ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(99, 102, 241, 0.4)',
@@ -149,7 +146,7 @@ export default function AdminPanel({ currentUserId }) {
                             }}
                             onClick={() => setShowAdult(!showAdult)}
                         >
-                            {showAdult ? '🔞 Obras +18: Visíveis' : '🛡️ Obras +18: Ocultas'}
+                            {showAdult ? 'Ocultar +18' : 'Mostrar +18'}
                         </button>
                         <span className="admin-badge">
                             {works.filter((w) => showAdult || !isWorkAdult(w)).length} {works.filter((w) => showAdult || !isWorkAdult(w)).length === 1 ? 'obra' : 'obras'}
@@ -189,12 +186,7 @@ export default function AdminPanel({ currentUserId }) {
                                                         height: '55px',
                                                         objectFit: 'cover',
                                                         borderRadius: '6px',
-                                                        filter: isAdult ? 'blur(10px)' : 'none',
-                                                        transition: 'filter 0.2s ease',
                                                     }}
-                                                    onMouseEnter={(e) => { e.currentTarget.style.filter = 'none'; }}
-                                                    onMouseLeave={(e) => { if (isAdult) e.currentTarget.style.filter = 'blur(10px)'; }}
-                                                    title={isAdult ? 'Obra +18 (Passe o mouse para revelar capa)' : w.title}
                                                 />
                                             </td>
                                             <td className="admin-name">
