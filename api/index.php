@@ -25,6 +25,11 @@ if (!file_exists('/tmp/database.sqlite')) {
     @touch('/tmp/database.sqlite');
 }
 
+// Normaliza os scripts da Vercel para o Laravel não cortar o prefixo /api
+$_SERVER['SCRIPT_NAME'] = '/index.php';
+$_SERVER['SCRIPT_FILENAME'] = __DIR__ . '/../public/index.php';
+$_SERVER['PHP_SELF'] = '/index.php';
+
 // Carrega o autoloader do Composer
 require __DIR__ . '/../vendor/autoload.php';
 
