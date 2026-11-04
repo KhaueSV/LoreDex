@@ -14,6 +14,25 @@ export const clearToken = () => {
     localStorage.removeItem('token');
 };
 
+// ---------------- USUÁRIO ----------------
+
+export const getSavedUser = () => {
+    try {
+        const user = localStorage.getItem('loredex_user');
+        return user ? JSON.parse(user) : null;
+    } catch {
+        return null;
+    }
+};
+
+export const saveUser = (user) => {
+    localStorage.setItem('loredex_user', JSON.stringify(user));
+};
+
+export const clearUser = () => {
+    localStorage.removeItem('loredex_user');
+};
+
 // ---------------- E-MAIL ----------------
 
 export const getSavedEmail = () => {
@@ -27,6 +46,7 @@ export const saveEmail = (email) => {
 export const clearSavedEmail = () => {
     localStorage.removeItem('savedEmail');
 };
+
 
 // ---------------- HEADERS ----------------
 
@@ -59,10 +79,29 @@ export const login = async (email, password) => {
     // Salva o token
     setToken(data.token);
 
+    // Salva Ususario
+    saveUser(data.user);
+
     // Salva somente o e-mail
     saveEmail(email);
 
     return data.user;
+};
+
+export const getChapters = async (workId) => {
+    const token = getToken();
+    const response = await fetch(`/api/works/${workId}/chapters`, {
+        headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    
+    if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Erro ao carregar capítulos');
+    }
+    return await response.json();
 };
 
 export const register = async (name, email, password) => {
@@ -85,6 +124,9 @@ export const register = async (name, email, password) => {
     // Salva o token
     setToken(data.token);
 
+    // Salva Ususario
+    saveUser(data.user);
+
     // Salva somente o e-mail
     saveEmail(email);
 
@@ -98,9 +140,8 @@ export const logout = async () => {
             headers: headers(),
         });
     } finally {
-        // Remove somente o token.
-        // O e-mail continua salvo para facilitar o próximo login.
         clearToken();
+        clearUser();
     }
 };
 
@@ -114,10 +155,33 @@ export const getWorks = async () => {
     });
 
     if (!response.ok) {
-        throw new Error('Erro ao carregar as obras.');
+    const erro = await response.text();
+    console.error('Erro ao carregar obras:', response.status, erro);
+    throw new Error('Erro ao carregar as obras.');
     }
 
     return response.json();
+};
+
+// RECOMENDAR uma obra
+export const recommendWork = async (genres, excludeAdult = true, excludeId = null) => {
+    const response = await fetch(`${API_URL}/works/recommend`, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({
+            genres,
+            exclude_adult: excludeAdult,
+            ...(excludeId ? { exclude_id: excludeId } : {}),
+        }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || 'Erro ao recomendar uma obra.');
+    }
+
+    return data;
 };
 
 // INSERIR novos dados (POST)
@@ -131,7 +195,7 @@ export const createWork = async (workData) => {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-        throw new Error(data.message || 'Erro ao adicionar a obra.');
+        throw new Error('Erro ao adicionar a obra.');
     }
 
     return data;
@@ -152,6 +216,36 @@ export const updateWork = async (id, workData) => {
     return response.json();
 };
 
+// ATUALIZAR total de capítulos de uma obra (PATCH)
+export const updateWorkChaptersCount = async (id, totalChapters) => {
+    const response = await fetch(`${API_URL}/works/${id}/chapters-count`, {
+        method: 'PATCH',
+        headers: headers(),
+        body: JSON.stringify({ total_chapters: totalChapters }),
+    });
+
+    if (!response.ok) {
+        throw new Error('Erro ao atualizar capítulos da obra.');
+    }
+
+    return response.json();
+};
+
+// SINCRONIZAR metadados de uma obra ou de todas (gêneros, capítulos, tradução)
+export const syncWorkMetadata = async (id = null) => {
+    const url = id ? `${API_URL}/works/${id}/sync` : `${API_URL}/works/sync-all`;
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: headers(),
+    });
+
+    if (!response.ok) {
+        throw new Error('Erro ao sincronizar metadados.');
+    }
+
+    return response.json();
+};
+
 // EXCLUIR uma obra (DELETE)
 export const deleteWork = async (id) => {
     const response = await fetch(`${API_URL}/works/${id}`, {
@@ -162,74 +256,4 @@ export const deleteWork = async (id) => {
     if (!response.ok) {
         throw new Error('Erro ao excluir a obra.');
     }
-};
-
-const collectionResponse = async (response, fallbackMessage) => {
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-        throw new Error(data.message || fallbackMessage);
-    }
-
-    return data;
-};
-
-export const getCollections = async () => {
-    const response = await fetch(`${API_URL}/collections`, {
-        method: 'GET',
-        headers: headers(),
-    });
-
-    return collectionResponse(response, 'Erro ao carregar as coleções.');
-};
-
-export const createCollection = async (collectionData) => {
-    const response = await fetch(`${API_URL}/collections`, {
-        method: 'POST',
-        headers: headers(),
-        body: JSON.stringify(collectionData),
-    });
-
-    return collectionResponse(response, 'Erro ao criar a coleção.');
-};
-
-export const updateCollection = async (collectionId, collectionData) => {
-    const response = await fetch(`${API_URL}/collections/${collectionId}`, {
-        method: 'PATCH',
-        headers: headers(),
-        body: JSON.stringify(collectionData),
-    });
-
-    return collectionResponse(response, 'Erro ao atualizar a coleção.');
-};
-
-export const deleteCollection = async (collectionId) => {
-    const response = await fetch(`${API_URL}/collections/${collectionId}`, {
-        method: 'DELETE',
-        headers: headers(),
-    });
-
-    if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.message || 'Erro ao excluir a coleção.');
-    }
-};
-
-export const addWorkToCollection = async (collectionId, workId) => {
-    const response = await fetch(`${API_URL}/collections/${collectionId}/works`, {
-        method: 'POST',
-        headers: headers(),
-        body: JSON.stringify({ work_id: workId }),
-    });
-
-    return collectionResponse(response, 'Erro ao adicionar a obra à coleção.');
-};
-
-export const removeWorkFromCollection = async (collectionId, workId) => {
-    const response = await fetch(`${API_URL}/collections/${collectionId}/works/${workId}`, {
-        method: 'DELETE',
-        headers: headers(),
-    });
-
-    return collectionResponse(response, 'Erro ao remover a obra da coleção.');
 };

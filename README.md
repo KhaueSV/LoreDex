@@ -1,58 +1,166 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 📖 LoreDex
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+> **LoreDex** é uma plataforma moderna para amantes de mangás, novels e webnovels gerenciarem sua própria biblioteca de leituras, descobrirem novas obras de forma inteligente e acompanharem o progresso de seus capítulos.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🚀 Funcionalidades
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 📚 Biblioteca Pessoal
+- **Acervo Individual por Usuário:** Cada conta possui sua biblioteca exclusiva. O usuário adiciona e remove obras da sua lista sem interferir na biblioteca de outros usuários.
+- **Busca e Filtros Avançados:** Filtre seu acervo por título, sinopse, formato (Mangá, Novel, Webnovel), estado (Em Lançamento, Concluído, etc.) e múltiplos gêneros simultaneamente.
+- **Ordenação:** Organize suas obras por ordem padrão, A–Z, Z–A ou as adicionadas recentemente.
+- **Filtro de Conteúdo +18:** Alternância rápida para exibir ou ocultar títulos adultos/ecchi.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 🎲 Recomendação Aleatória de Obras (via AniList)
+- **Sorteio no Catálogo Global:** Não sabe o que ler? Um sistema de sorteio inteligente busca obras populares diretamente da API oficial do AniList.
+- **Controle de Conteúdo:** Opção de sortear com ou sem obras adultas (+18).
+- **Filtro por Gênero:** Permite limitar o sorteio a gêneros selecionados ou sortear em qualquer categoria.
+- **Evita Repetições:** Prioriza obras que você ainda não tem na biblioteca e nunca repete a recomendação atual.
+- **Adição em 1 Clique:** Salve a obra sorteada diretamente na sua biblioteca pessoal com download automatizado de metadados e tradução de sinopse.
 
-## Learning Laravel
+### 🌐 Integrações & Metadados Automáticos
+- **Pesquisa Integrada com AniList:** Adicione obras pesquisando em tempo real no AniList.
+- **Preenchimento Automático:** Capa de alta resolução, total de capítulos, formato, status e gêneros identificados automaticamente.
+- **Fallback Inteligente de Capítulos:** Consulta secundária em APIs externas (Jikan/MyAnimeList e MangaDex) caso o AniList não forneça o número de capítulos.
+- **Tradução Automática de Sinopse:** Tradução instantânea das sinopses em inglês para Português (PT-BR).
+- **Cadastro Manual:** Formulário completo para inclusão manual de qualquer obra com campos customizáveis.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 💬 Capítulos & Avaliações
+- Acompanhamento de capítulos e links de leitura.
+- Sistema de reviews e notas por critérios para cada obra.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 🛡️ Painel Administrativo
+- **Visão Geral e Estatísticas:** Métricas de usuários cadastrados, administradores e obras registradas.
+- **Gerenciamento de Acesso:** Promover ou rebaixar papéis de usuários (Cliente / Administrador).
+- **Gestão do Catálogo Geral:**
+  - **Bloqueio Temporário:** Oculta uma obra com problemas de todas as bibliotecas e bloqueia novas adições. Ao desbloquear, a obra reaparece normalmente para quem a tinha.
+  - **Exclusão Permanente:** Remove a obra em definitivo de todo o sistema.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+---
 
-## Agentic Development
+## 🛠️ Tecnologias Utilizadas
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### Backend
+- **[PHP 8.2+](https://www.php.net/)**
+- **[Laravel 11 / 12](https://laravel.com/)**
+- **[Laravel Sanctum](https://laravel.com/docs/sanctum):** Autenticação SPA baseada em tokens.
+- **MySQL:** Banco de dados relacional.
 
-```bash
-composer require laravel/boost --dev
+### Frontend
+- **[React 19](https://react.dev/)**
+- **[Vite](https://vite.dev/):** Ferramenta de build ultrarrápida.
+- **CSS3 Moderno:** Layout responsivo, carrosséis customizados com scroll snap, temas escuros com suporte a blur e gradientes.
 
-php artisan boost:install
+### APIs Externas
+- **[AniList GraphQL API](https://anilist.gitbook.io/anilist-apiv2-docs/)**: Catálogo de obras, autores e capas.
+- **[Jikan API (MyAnimeList)](https://jikan.moe/)**: Busca de capítulos e volumes.
+- **[MangaDex API](https://api.mangadex.org/)**: Contagem de capítulos e agregador.
+- **Google Translate API**: Tradução de sinopses para português.
+
+---
+
+## 📦 Instalação e Execução Local
+
+### Pré-requisitos
+- **PHP** >= 8.2 com extensões PDO, OpenSSL, cURL e Mbstring ativas (disponível via Laragon, Herd ou XAMPP)
+- **Composer**
+- **Node.js** >= 18.x e **NPM**
+- **MySQL**
+
+### Passo a Passo
+
+1. **Clone o repositório:**
+   ```bash
+   git clone https://github.com/SEU_USUARIO/LoreDex.git
+   cd LoreDex
+   ```
+
+2. **Instale as dependências do PHP:**
+   ```bash
+   composer install
+   ```
+
+3. **Instale as dependências do Frontend:**
+   ```bash
+   npm install
+   ```
+
+4. **Configure o arquivo de ambiente:**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+
+5. **Configure o banco de dados no `.env`:**
+   ```env
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=novel_app
+   DB_USERNAME=root
+   DB_PASSWORD=
+   ```
+
+6. **Execute as migrações do banco:**
+   ```bash
+   php artisan migrate
+   ```
+
+7. **Inicie os servidores de desenvolvimento:**
+   - Em um terminal, inicie o backend do Laravel:
+     ```bash
+     php artisan serve
+     ```
+   - Em outro terminal, inicie o Vite para o frontend:
+     ```bash
+     npm run dev
+     ```
+
+8. **Acesse no navegador:**
+   - Abra [http://localhost:8000](http://localhost:8000) (ou pelo host configurado no Laragon/virtual host).
+
+---
+
+## 🗂️ Estrutura do Projeto
+
+```text
+LoreDex/
+├── app/
+│   ├── Http/Controllers/
+│   │   ├── AdminController.php         # Estatísticas, gestão de usuários e bloqueio de obras
+│   │   ├── AuthController.php          # Login, registro e dados da sessão
+│   │   ├── ChapterController.php       # Gestão de capítulos e leitura
+│   │   ├── WorkController.php          # Catálogo e biblioteca pessoal do usuário
+│   │   └── WorkReviewController.php    # Avaliações e comentários
+│   └── Models/
+│       ├── User.php                    # Usuário e relacionamento com obras da biblioteca
+│       ├── Work.php                    # Catálogo global de obras
+│       └── Chapter.php, WorkReview.php
+├── database/migrations/                # Histórico de estrutura do banco de dados
+├── resources/
+│   ├── css/
+│   │   ├── admin.css                   # Estilização do painel administrativo
+│   │   ├── home.css                    # Estilos da home, cards, filtros e recomendação
+│   │   └── login.css, capitulos.css
+│   └── js/
+│       ├── components/
+│       │   ├── App.jsx                 # Tela principal da aplicação
+│       │   ├── UserMenu.jsx            # Menu do usuário e navegação
+│       │   └── WorkRecommendation.jsx  # Componente de recomendação aleatória (AniList)
+│       ├── pages/
+│       │   ├── AdminPanel.jsx          # Interface do painel de administração
+│       │   ├── Login.jsx               # Autenticação (Login / Cadastro)
+│       │   └── TelaCapitulos.jsx       # Detalhes, leitura e avaliações
+│       └── services/
+│           └── api.js                  # Camada de comunicação com a API Laravel
+└── routes/
+    ├── api.php                         # Rotas REST autenticadas (Sanctum)
+    └── web.php                         # Renderização da SPA
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## 📄 Licença
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Este projeto é desenvolvido para fins educacionais e de entretenimento sob a licença [MIT](LICENSE).

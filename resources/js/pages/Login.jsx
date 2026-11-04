@@ -102,9 +102,17 @@ export default function Login({ onSuccess }) {
     };
 
     const toggleMode = () => {
-        setIsRegister(!isRegister);
+        const nextIsRegister = !isRegister;
+        setIsRegister(nextIsRegister);
         setError('');
         setPassword('');
+        if (nextIsRegister) {
+            setEmail('');
+            setName('');
+        } else {
+            const saved = getSavedEmail() || localStorage.getItem(SAVED_EMAIL_KEY) || '';
+            setEmail(saved);
+        }
     };
 
     const nextBackgroundIndex =
