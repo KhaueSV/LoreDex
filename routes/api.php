@@ -3,6 +3,9 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\WorkController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CollectionController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ChapterController;
 use App\Http\Controllers\WorkReviewController;
@@ -15,13 +18,23 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/profile', [ProfileController::class, 'show']);
+    Route::patch('/profile', [ProfileController::class, 'update']);
+    Route::patch('/profile/works/{work}', [ProfileController::class, 'activity']);
+    Route::get('/catalog/search', [CatalogController::class, 'search'])->middleware('throttle:30,1');
+
+    Route::get('/collections', [CollectionController::class, 'index']);
+    Route::post('/collections', [CollectionController::class, 'store']);
+    Route::patch('/collections/{collection}', [CollectionController::class, 'update']);
+    Route::delete('/collections/{collection}', [CollectionController::class, 'destroy']);
+    Route::post('/collections/{collection}/works', [CollectionController::class, 'addWork']);
+    Route::delete('/collections/{collection}/works/{work}', [CollectionController::class, 'removeWork']);
 
     Route::get('/works', [WorkController::class, 'index']);
     Route::get('/works/{work}', [WorkController::class, 'show']);
     Route::post('/works', [WorkController::class, 'store']);
-    Route::post('/works/sync-all', [WorkController::class, 'syncMetadata']);
     Route::post('/works/{work}/sync', [WorkController::class, 'syncMetadata']);
-    Route::patch('/works/{work}/chapters-count', [WorkController::class, 'update']);
+    Route::patch('/works/{work}/chapters-count', [WorkController::class, 'updateChaptersCount']);
     Route::post('/works/recommend', [WorkController::class, 'recommend']);
 
     // Capítulos de uma obra (leitura)
@@ -38,6 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Só administrador
     Route::middleware('admin')->group(function () {
+        Route::post('/works/sync-all', [WorkController::class, 'syncMetadata']);
         Route::match(['put', 'patch'], '/works/{work}', [WorkController::class, 'update']);
 
         Route::prefix('admin')->group(function () {

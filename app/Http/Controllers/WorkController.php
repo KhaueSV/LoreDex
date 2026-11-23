@@ -23,7 +23,7 @@ class WorkController extends Controller
     // GET: exibir detalhes de uma obra
     public function show($id)
     {
-        return response()->json(Work::findOrFail($id));
+        return response()->json(Work::where('is_blocked', false)->findOrFail($id));
     }
 
     // POST: adicionar uma obra à biblioteca do usuário.
@@ -128,6 +128,16 @@ class WorkController extends Controller
         return response()->json($work);
     }
 
+    public function updateChaptersCount(Request $request, Work $work)
+    {
+        abort_if($work->is_blocked, 404);
+        abort_unless($request->user()->isAdmin() || $request->user()->works()->whereKey($work->id)->exists(), 403);
+        $data = $request->validate(['total_chapters' => 'required|integer|min:0|max:2147483647']);
+        $work->update($data);
+
+        return response()->json($work);
+    }
+
     // DELETE: remover da biblioteca pessoal do usuário
     public function destroy(Request $request, $id)
     {
@@ -192,7 +202,14 @@ class WorkController extends Controller
      */
     public function syncMetadata(Request $request, $id = null)
     {
-        $works = $id ? [Work::findOrFail($id)] : Work::all();
+        $user = $request->user();
+        $catalog = Work::query()->where('is_blocked', false);
+
+        if ($id !== null && !$user->isAdmin()) {
+            abort_unless($user->works()->whereKey($id)->exists(), 403);
+        }
+
+        $works = $id === null ? $catalog->cursor() : [$catalog->findOrFail($id)];
         $updated = [];
 
         foreach ($works as $work) {
