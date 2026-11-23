@@ -11,7 +11,7 @@ class WorkReviewController extends Controller
     public function index($workId)
     {
         // Garante a inclusão explícita de user_id da review para o frontend comparar
-        $reviews = WorkReview::with('user:id,name') 
+        $reviews = WorkReview::with('user:id,name')
             ->where('work_id', $workId)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -30,7 +30,7 @@ class WorkReviewController extends Controller
 
         $review = WorkReview::create([
             'work_id'  => $workId,
-            'user_id'  => $request->user()->id, 
+            'user_id'  => $request->user()->id,
             'comment'  => $validated['comment'],
             'verdict'  => $validated['verdict'] ?? null,
             'score'    => $validated['score'] ?? null,

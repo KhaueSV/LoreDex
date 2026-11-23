@@ -1,11 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import Login from '../pages/Login';
-import AdminPanel from '../pages/AdminPanel';
-import '../../css/home.css';
-import { getWorks, createWork, updateWork, deleteWork, getToken, logout, getMe, syncWorkMetadata } from '../services/api';
-import TelaCapitulos from '../pages/TelaCapitulos';
-import UserMenu from './UserMenu';
-import WorkRecommendation from '../components/WorkRecommendation';
+import { getWorks, createWork, updateWork, deleteWork, getToken, logout } from '../services/api';
 
 const PLACEHOLDER = 'https://via.placeholder.com/220x320/0f172a/6366f1?text=Sem+Capa';
 
@@ -562,9 +557,9 @@ function Home({ isAdmin }) {
             }
         }
 
-        const dados = { 
-            title: manualTitle, 
-            cover_image: manualCover, 
+        const dados = {
+            title: manualTitle,
+            cover_image: manualCover,
             description: manualDesc,
             source_url: manualSourceUrl,
             total_chapters: Number(manualChapters) || 0,
@@ -572,7 +567,7 @@ function Home({ isAdmin }) {
             status: manualStatus,
             genres: manualGenres,
         };
-        
+
         setSavingWorkKey('manual');
         try {
             if (editingId) {
@@ -602,8 +597,8 @@ function Home({ isAdmin }) {
 
     if (viewingChaptersWork) {
         return (
-            <TelaCapitulos 
-                work={viewingChaptersWork} 
+            <TelaCapitulos
+                work={viewingChaptersWork}
                 onBack={() => {
                     setViewingChaptersWork(null);
                     fetchMyNovels();
@@ -974,12 +969,12 @@ function Home({ isAdmin }) {
         </>
     );
 }
-
 export default function App() {
     const [logged, setLogged] = useState(!!getToken());
     const [user, setUser] = useState(null);
     const [view, setView] = useState('home');
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [pagina, setPagina] = useState('inicio');
 
     const handleLogout = async () => {
         try {
@@ -1007,17 +1002,43 @@ export default function App() {
 
     return (
         <>
-            <UserMenu
-                user={user}
-                isAdmin={isAdmin}
-                view={view}
-                onToggleAdmin={() => setView(view === 'admin' ? 'home' : 'admin')}
-                onLogout={() => setShowLogoutConfirm(true)}
-            />
+            <div
+                style={{
+                    position: 'fixed',
+                    top: '20px',
+                    right: '25px',
+                    zIndex: 500
+                }}
+            >
+                <button
+                    onClick={() => setShowLogoutConfirm(true)}
+                    style={{
+                        background: 'rgba(15, 23, 42, 0.85)',
+                        color: '#cbd5e1',
+                        border: '1px solid #475569',
+                        padding: '10px 18px',
+                        borderRadius: '10px',
+                        fontSize: '14px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        transition: '0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#ef4444';
+                        e.currentTarget.style.borderColor = '#ef4444';
+                        e.currentTarget.style.color = 'white';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(15, 23, 42, 0.85)';
+                        e.currentTarget.style.borderColor = '#475569';
+                        e.currentTarget.style.color = '#cbd5e1';
+                    }}
+                >
+                    Sair
+                </button>
+            </div>
 
-            {view === 'admin' && isAdmin
-                ? <AdminPanel currentUserId={user.id} />
-                : <Home isAdmin={isAdmin} />}
+            <Home />
 
             {showLogoutConfirm && (
                 <div

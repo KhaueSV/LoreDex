@@ -15,7 +15,7 @@ class ChapterController extends Controller{
             if (!$url) {
                 return response()->json([
                     'message' => 'Nenhuma URL de capítulos cadastrada para esta obra.'
-                ], 400); 
+                ], 400);
             }
 
             $response = Http::timeout(15)

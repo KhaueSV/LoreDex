@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Laravel\Sanctum\HasApiTokens;
 
 
@@ -33,14 +35,13 @@ class User extends Authenticatable
         ];
     }
 
-    // Biblioteca pessoal: obras que este usuário adicionou
-    public function works()
+    public function collections(): HasMany
     {
-        return $this->belongsToMany(Work::class, 'user_works')->withTimestamps();
+        return $this->hasMany(Collection::class);
     }
 
-    public function isAdmin(): bool
+    public function works(): BelongsToMany
     {
-        return $this->role === 'admin';
+        return $this->belongsToMany(Work::class, 'user_works')->withTimestamps();
     }
 }

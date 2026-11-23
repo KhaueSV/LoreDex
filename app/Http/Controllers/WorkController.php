@@ -30,59 +30,40 @@ class WorkController extends Controller
     // Se a obra já existe no catálogo, apenas vincula; senão cria no catálogo e vincula.
     public function store(Request $request)
     {
-        $user = $request->user();
-        $titleTrimmed = trim((string) $request->title);
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'cover_image' => 'nullable|string|max:2048',
+            'cover_url' => 'nullable|string|max:2048',
+            'description' => 'nullable|string',
+            'synopsis' => 'nullable|string',
+            'source_url' => 'nullable|string|max:2048',
+            'type' => 'nullable|string',
+            'status' => 'nullable|string',
+            'is_adult' => 'sometimes|boolean',
+            'genres' => 'nullable|array',
+            'genres.*' => 'string',
+            'total_chapters' => 'nullable|integer|min:0',
+            'author' => 'nullable|string|max:255',
+        ]);
 
-        if ($titleTrimmed === '') {
-            return response()->json(['message' => 'O título da obra é obrigatório.'], 422);
+        $work = Work::firstOrNew(['title' => $validated['title']]);
+
+        if (!$work->exists) {
+            $work->fill([
+                'cover_url' => $validated['cover_image'] ?? $validated['cover_url'] ?? null,
+                'synopsis' => $validated['description'] ?? $validated['synopsis'] ?? null,
+                'source_url' => $validated['source_url'] ?? null,
+                'type' => $this->normalizeType($validated['type'] ?? 'novel'),
+                'status' => $this->normalizeStatus($validated['status'] ?? 'ongoing'),
+                'is_adult' => $validated['is_adult'] ?? false,
+                'genres' => $this->normalizeGenres($validated['genres'] ?? []),
+                'total_chapters' => $validated['total_chapters'] ?? 0,
+                'author' => $validated['author'] ?? null,
+            ]);
+            $work->save();
         }
 
-        $existing = Work::whereRaw('LOWER(TRIM(title)) = ?', [mb_strtolower($titleTrimmed, 'UTF-8')])->first();
-        if ($existing) {
-            if ($existing->is_blocked) {
-                return response()->json([
-                    'message' => 'Esta obra está temporariamente indisponível na plataforma.',
-                ], 403);
-            }
-
-            if ($user->works()->whereKey($existing->id)->exists()) {
-                return response()->json([
-                    'message' => 'Esta obra já está na sua biblioteca.',
-                    'work'    => $existing,
-                ], 409);
-            }
-
-            // Já está no catálogo (outro usuário adicionou): só vincula, sem chamar APIs externas
-            $user->works()->attach($existing->id);
-
-            return response()->json($existing, 201);
-        }
-
-        $work = new Work();
-        $work->title = $titleTrimmed;
-        $work->cover_url = $request->cover_image ?? $request->cover_url;
-
-        $rawDesc = $request->description ?? $request->synopsis ?? '';
-        // Se o navegador já traduziu a sinopse, não chama o Google Tradutor de novo
-        $work->synopsis = $request->boolean('already_translated')
-            ? (trim((string) $rawDesc) !== '' ? $rawDesc : 'Sem sinopse disponível.')
-            : $this->translateTextIfNeeded($rawDesc);
-
-        $work->source_url = $request->source_url;
-        $work->type = $this->normalizeType($request->type);
-        $work->status = $this->normalizeStatus($request->status);
-        $work->is_adult = filter_var($request->is_adult ?? false, FILTER_VALIDATE_BOOLEAN);
-        $work->genres = $this->normalizeGenres($request->genres);
-
-        $chapters = (int) ($request->total_chapters ?? 0);
-        // Só busca capítulos em APIs externas se o navegador ainda não tentou (ex.: cadastro manual)
-        if ($chapters <= 0 && !empty($work->title) && !$request->boolean('chapters_checked')) {
-            $chapters = $this->fetchChaptersFallback($work->title, $work->source_url);
-        }
-        $work->total_chapters = $chapters;
-
-        $work->save();
-        $user->works()->attach($work->id);
+        $request->user()->works()->syncWithoutDetaching([$work->id]);
 
         return response()->json($work, 201);
     }
