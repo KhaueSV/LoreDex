@@ -392,3 +392,27 @@ export const deleteWorkAdmin = async (id) => {
     if (!res.ok) throw new Error('Erro ao excluir obra do catálogo');
     return res.json().catch(() => ({}));
 };
+
+
+async function request(path, method = 'GET', body) {
+    const response = await fetch(API_URL + path, {
+        method,
+        headers: headers(),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    if (response.status === 204) return null;
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(Object.values(data.errors || {}).flat()[0] || data.message || 'Erro ao processar a solicitação.');
+    }
+    return data;
+}
+
+export const getProfile = () => request('/profile');
+export const updateProfile = data => request('/profile', 'PATCH', data);
+export const updateWorkActivity = (id, data) => request('/profile/works/' + id, 'PATCH', data);
+export const collectionRequest = (path = '', method = 'GET', data) => request('/collections' + path, method, data);
+export const searchCatalog = (query, signal) => fetch(API_URL + '/catalog/search?' + new URLSearchParams({ q: query }), {
+    headers: headers(),
+    signal,
+}).then(response => response.ok ? response.json() : []);

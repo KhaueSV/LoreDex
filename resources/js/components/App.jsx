@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import Login from '../pages/Login';
+import Collections from '../pages/Collections';
+import Profile from '../pages/Profile';
+import '../../css/account.css';
 import AdminPanel from '../pages/AdminPanel';
 import '../../css/home.css';
-import { getWorks, createWork, updateWork, deleteWork, getToken, logout, getMe, syncWorkMetadata } from '../services/api';
+import { getWorks, createWork, updateWork, deleteWork, getToken, logout, getMe, getProfile, updateWorkActivity, searchCatalog, saveUser } from '../services/api';
 import TelaCapitulos from '../pages/TelaCapitulos';
 import UserMenu from './UserMenu';
 import WorkRecommendation from '../components/WorkRecommendation';
@@ -44,6 +47,8 @@ export const translateGenre = (genre) => {
 export const translateFormat = (type) => {
     const upper = String(type || '').toUpperCase();
     if (upper === 'MANGA') return 'Mangá';
+    if (upper === 'MANHWA') return 'Manhwa';
+    if (upper === 'MANHUA') return 'Manhua';
     if (upper === 'NOVEL') return 'Novel';
     if (upper === 'WEBNOVEL') return 'Webnovel';
     if (upper === 'ONE_SHOT') return 'One-Shot';
@@ -166,7 +171,7 @@ const CarouselSection = ({ title, icon, works, loading, onEdit, onDelete, onClic
     );
 };
 
-function Home({ isAdmin }) {
+function Home({ isAdmin, selectedWork, onViewWork }) {
     const [allWorks, setAllWorks] = useState([]);
     const [loadingMyWorks, setLoadingMyWorks] = useState(true);
 
@@ -198,7 +203,29 @@ function Home({ isAdmin }) {
     const [manualGenres, setManualGenres] = useState([]);
 
     const [workToDelete, setWorkToDelete] = useState(null);
-    const [workDetails, setWorkDetails] = useState(null);
+    const [workDetails, setWorkDetails] = useState(selectedWork);
+    const [favoriteIds, setFavoriteIds] = useState([]);
+    const [favoriteError, setFavoriteError] = useState('');
+    const [favoriteBusy, setFavoriteBusy] = useState(false);
+
+    useEffect(() => {
+        getProfile().then(profile => setFavoriteIds(profile.favorites.map(work => work.id)))
+            .catch(error => setFavoriteError(error.message));
+    }, []);
+
+    async function toggleFavorite(work) {
+        const isFavorite = !favoriteIds.includes(work.id);
+        setFavoriteBusy(true);
+        setFavoriteError('');
+        try {
+            await updateWorkActivity(work.id, { is_favorite: isFavorite });
+            setFavoriteIds(ids => isFavorite ? [...ids, work.id] : ids.filter(id => id !== work.id));
+        } catch (error) {
+            setFavoriteError(error.message);
+        } finally {
+            setFavoriteBusy(false);
+        }
+    }
     const [viewingChaptersWork, setViewingChaptersWork] = useState(null);
     const [savingWorkKey, setSavingWorkKey] = useState(null);
 
@@ -220,17 +247,6 @@ function Home({ isAdmin }) {
             const data = await getWorks();
             setAllWorks(data);
 
-            // Se alguma obra estiver sem gêneros ou sem capítulos, sincroniza automaticamente em segundo plano
-            const needsAutoSync = Array.isArray(data) && data.some(
-                (w) => parseGenres(w.genres).length === 0 || Number(w.total_chapters) <= 0
-            );
-            if (needsAutoSync) {
-                syncWorkMetadata()
-                    .then((updated) => {
-                        if (Array.isArray(updated)) setAllWorks(updated);
-                    })
-                    .catch(() => {});
-            }
         } catch (err) {
             console.error('Erro:', err);
         } finally {
@@ -416,10 +432,13 @@ function Home({ isAdmin }) {
         return 0;
     };
 
-    // ---------------- BUSCA ANILIST E LIMPEZA ----------------
-    const handleSearchAniList = async (valor, adult = showAdult) => {
-        const busca = valor.trim();
-        if (!busca) { setSearchResults([]); return; }
+    useEffect(() => {
+        const busca = searchQuery.trim();
+        setSearchResults([]);
+        if (busca.length < 2) return;
+
+        const controller = new AbortController();
+        const adult = showAdult;
 
         const query = `
             query ($search: String, $isAdult: Boolean, $genreNotIn: [String]) {
@@ -432,24 +451,38 @@ function Home({ isAdmin }) {
         `;
         const variables = { search: busca, isAdult: adult ? undefined : false, genreNotIn: adult ? undefined : ['Hentai', 'Ecchi'] };
 
-        try {
-            const response = await fetch('https://graphql.anilist.co', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query, variables })
-            });
-            const result = await response.json();
-            setSearchResults(result?.data?.Page?.media || []);
-        } catch (error) {
-            console.error('Erro na API:', error);
-        }
-    };
+        const timer = setTimeout(async () => {
+            const [anilist, catalog] = await Promise.allSettled([
+                fetch('https://graphql.anilist.co', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, variables }),
+                    signal: controller.signal,
+                }).then(response => response.json()),
+                searchCatalog(busca, controller.signal),
+            ]);
+            if (controller.signal.aborted) return;
+            const titles = new Set();
+            setSearchResults([
+                ...(anilist.value?.data?.Page?.media || []),
+                ...(catalog.value || []),
+            ].filter(work => {
+                const title = work.title.romaji.trim().toLowerCase();
+                if (titles.has(title)) return false;
+                titles.add(title);
+                return true;
+            }));
+        }, 350);
+
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+        };
+    }, [searchQuery, showAdult]);
 
     const handleSearchChange = (e) => {
         const valor = e.target.value;
         setSearchQuery(valor);
-        if (!valor.trim()) { setSearchResults([]); return; }
-        handleSearchAniList(valor);
     };
 
     // Limpar busca
@@ -461,7 +494,6 @@ function Home({ isAdmin }) {
     const toggleAdult = () => {
         const novo = !showAdult;
         setShowAdult(novo);
-        if (searchQuery.trim()) handleSearchAniList(searchQuery, novo);
     };
 
     // ---------------- AÇÕES (SALVAR / EDITAR / EXCLUIR) ----------------
@@ -500,12 +532,14 @@ function Home({ isAdmin }) {
                 translateSynopsisToPt(rawDesc),
                 knownChapters > 0
                     ? Promise.resolve(knownChapters)
-                    : fetchChaptersFromJikanOrMangaDex(novel.title?.english || novel.title?.romaji),
+                    : novel.sourceUrl ? Promise.resolve(0)
+                        : fetchChaptersFromJikanOrMangaDex(novel.title?.english || novel.title?.romaji),
             ]);
 
             await enviarParaLaravel({
                 title: novel.title.romaji,
                 cover_image: novel.coverImage.extraLarge,
+                source_url: novel.sourceUrl,
                 description: synopsis.text,
                 type: novel.format || 'MANGA',
                 status: novel.status || 'RELEASING',
@@ -640,7 +674,7 @@ function Home({ isAdmin }) {
                             <input 
                                 type="text" 
                                 className="search-input" 
-                                placeholder="Pesquisar no AniList (Ex: Solo Leveling)..." 
+                                placeholder="Pesquisar obras (Ex: Solo Leveling)..."
                                 value={searchQuery} 
                                 onChange={handleSearchChange} 
                             />
@@ -736,7 +770,7 @@ function Home({ isAdmin }) {
                                 return (
                                     <article key={novel.id} className="loredex-card carousel-item">
                                         <div className="cover">
-                                            <img src={novel.coverImage.extraLarge} alt={`Capa de ${novel.title.romaji}`} />
+                                            <img src={novel.coverImage.extraLarge || PLACEHOLDER} alt={`Capa de ${novel.title.romaji}`} />
                                             <div className="badges">
                                                 <span className="badge type">{translateFormat(novel.format || 'Manga')}</span>
                                                 {novel.status && <span className="badge status">{translateStatus(novel.status)}</span>}
@@ -793,7 +827,7 @@ function Home({ isAdmin }) {
                 {sections.map((s) => (
                     <CarouselSection
                         key={s.title} title={s.title} icon={s.icon} works={s.works} loading={loadingMyWorks}
-                        onEdit={openEdit} onDelete={setWorkToDelete} onClickWork={setWorkDetails}
+                        onEdit={openEdit} onDelete={setWorkToDelete} onClickWork={work => { onViewWork(work); setWorkDetails(work); }}
                         isAdmin={isAdmin}
                     />
                 ))}
@@ -855,6 +889,14 @@ function Home({ isAdmin }) {
                                     </p>
                                 </div>
 
+                                <div className="account-actions">
+                                    <button className="btn-primary" type="button" disabled={favoriteBusy}
+                                        aria-pressed={favoriteIds.includes(workDetails.id)}
+                                        onClick={() => toggleFavorite(workDetails)}>
+                                        {favoriteIds.includes(workDetails.id) ? 'Remover dos favoritos' : 'Favoritar obra'}
+                                    </button>
+                                    {favoriteError && <p role="status">{favoriteError}</p>}
+                                </div>
                                 <div style={{ marginTop: 'auto', paddingTop: '24px' }}>
                                     <button
                                         className="btn-primary"
@@ -979,6 +1021,17 @@ export default function App() {
     const [logged, setLogged] = useState(!!getToken());
     const [user, setUser] = useState(null);
     const [view, setView] = useState('home');
+    const [selectedWork, setSelectedWork] = useState(null);
+
+    const recordView = work => updateWorkActivity(work.id, { viewed: true }).catch(error => {
+        console.error('Erro ao registrar visualização:', error);
+    });
+
+    const openWork = work => {
+        recordView(work);
+        setSelectedWork(work);
+        setView('home');
+    };
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     const handleLogout = async () => {
@@ -990,6 +1043,7 @@ export default function App() {
             setLogged(false);
             setShowLogoutConfirm(false);
             setView('home');
+            setSelectedWork(null);
         }
     };
 
@@ -1015,9 +1069,20 @@ export default function App() {
                 onLogout={() => setShowLogoutConfirm(true)}
             />
 
-            {view === 'admin' && isAdmin
-                ? <AdminPanel currentUserId={user.id} />
-                : <Home isAdmin={isAdmin} />}
+            {user && (
+                <nav className="account-nav" aria-label="Navegação principal">
+                    {[['home', 'Biblioteca'], ['collections', 'Coleções'], ['profile', 'Perfil']].map(([id, label]) => (
+                        <button key={id} type="button" aria-current={view === id ? 'page' : undefined}
+                            onClick={() => { setSelectedWork(null); setView(id); }}>{label}</button>
+                    ))}
+                </nav>
+            )}
+            {user && view === 'admin' && isAdmin && <AdminPanel currentUserId={user.id} />}
+            {user && view === 'collections' && <Collections onOpenWork={openWork} />}
+            {user && view === 'profile' && (
+                <Profile user={user} onOpenWork={openWork} onUpdate={updated => { saveUser(updated); setUser(updated); }} />
+            )}
+            {user && view === 'home' && <Home isAdmin={isAdmin} selectedWork={selectedWork} onViewWork={recordView} />}
 
             {showLogoutConfirm && (
                 <div

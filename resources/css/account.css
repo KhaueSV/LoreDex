@@ -1,0 +1,59 @@
+.account-nav, .account-page {
+    width: min(100% - 2rem, 56rem);
+    margin-inline: auto;
+}
+
+.account-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    padding: 1rem 0;
+}
+
+.account-page {
+    color: #e2e8f0;
+    padding-bottom: 3rem;
+}
+
+.account-panel {
+    display: grid;
+    gap: .75rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: #141c32;
+    border: 1px solid #334155;
+    border-radius: .75rem;
+}
+
+.account-page label {
+    display: grid;
+    gap: .35rem;
+}
+
+.account-page input, .account-page select, .account-page textarea {
+    width: 100%;
+    padding: .55rem;
+    color: #f8fafc;
+    background: #0f172a;
+    border: 1px solid #64748b;
+    border-radius: .4rem;
+}
+
+.account-actions, .account-page li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-block: .35rem;
+}
+
+.account-nav button, .account-page button:not(.btn-primary) {
+    padding: .45rem .75rem;
+    color: #e2e8f0;
+    background: #1e293b;
+    border: 1px solid #64748b;
+    border-radius: .4rem;
+}
+
+.account-nav button[aria-current="page"] {
+    background: #4338ca;
+}

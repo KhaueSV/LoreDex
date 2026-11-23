@@ -39,6 +39,17 @@ class User extends Authenticatable
         return $this->belongsToMany(Work::class, 'user_works')->withTimestamps();
     }
 
+    public function collections()
+    {
+        return $this->hasMany(Collection::class);
+    }
+
+    public function workActivity()
+    {
+        return $this->belongsToMany(Work::class, 'user_work_activity')
+            ->withPivot('last_viewed_at', 'is_favorite');
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
